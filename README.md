@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Talos Security Dashboard
 
-## Getting Started
+> **Visualization & Control Plane for Talos Protocol**
 
-First, run the development server:
+This dashboard provides real-time visibility into the Talos Security Gateway, utilizing strict contract-driven data validation.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Architecture
+
+```mermaid
+graph TD
+    Gateway[Talos Gateway] -->|Events/Status| Dashboard[Security Dashboard]
+    Dashboard -->|Reads| Contracts[@talos-protocol/contracts]
+    Dashboard -->|Strict Mode| SQLite[Dev Only Fixtures]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Live Activity Stream**: Real-time audit log visualization.
+- **Integrity Validation**: Strict cryptographic cursor verification (v3.2 Spec).
+- **Glassmorphism UI**: Premium dark-mode aesthetics.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+See `.agent/workflows/run-dashboard.md` for run instructions.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Install
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Run Dev Server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production
 
-## Deploy on Vercel
+```bash
+# Build
+npm run build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Start
+npm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
