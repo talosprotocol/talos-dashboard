@@ -141,7 +141,7 @@ self.__SERVER_FILES_MANIFEST={
     }
   },
   "appDir": "/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/deploy/repos/talos-dashboard",
-  "relativeAppDir": "",
+  "relativeAppDir": "deploy/repos/talos-dashboard",
   "files": [
     ".next/routes-manifest.json",
     ".next/server/pages-manifest.json",

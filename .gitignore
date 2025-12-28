@@ -1,5 +1,5 @@
 # dependencies
-node_modules
+node_modules/
 .pnpm-store
 
 # testing
@@ -26,3 +26,5 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+.next/
