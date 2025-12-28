@@ -9,7 +9,7 @@ This dashboard provides real-time visibility into the Talos Security Gateway, ut
 ```mermaid
 graph TD
     Gateway[Talos Gateway] -->|Events/Status| Dashboard[Security Dashboard]
-    Dashboard -->|Reads| Contracts[@talos-protocol/contracts]
+    Dashboard -->|Reads| Contracts["@talos-protocol/contracts"]
     Dashboard -->|Strict Mode| SQLite[Dev Only Fixtures]
 ```
 
