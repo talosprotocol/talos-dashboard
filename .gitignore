@@ -29,4 +29,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# next build
 .next/
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Husky
+.husky/_
+
+# Package manager
+package-lock.json
+
