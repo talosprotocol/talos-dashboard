@@ -1,74 +1,51 @@
-# Architecture
+# talos-dashboard Architecture
 
 ## Overview
+`talos-dashboard` is the Next.js-based Security Console for audit verification, real-time metrics, and proof visualization.
 
-The Talos Security Dashboard is a Next.js 14 application that provides real-time visibility into the Talos Security Gateway.
+## Internal Components
+
+| Component | Purpose |
+|-----------|---------|
+| `src/app/` | Next.js App Router pages |
+| `src/lib/data/` | Data source abstraction |
+| `src/lib/integrity/` | Cursor validation (re-exports) |
+| `src/components/` | React UI components |
+
+## External Dependencies
+
+| Dependency | Type | Usage |
+|------------|------|-------|
+| `[EXTERNAL]` @talosprotocol/contracts | NPM | Cursor derivation, validation |
+| `[EXTERNAL]` Gateway API | HTTP | Event fetching, status |
+
+## Contracts Used
+
+| Artifact | Version | Usage |
+|----------|---------|-------|
+| `deriveCursor` | @talosprotocol/contracts@^1.0 | Cursor validation |
+| `decodeCursor` | @talosprotocol/contracts@^1.0 | Cursor parsing |
+| `isUuidV7` | @talosprotocol/contracts@^1.0 | Event ID validation |
+
+## Gateway API Integration
+
+| Endpoint | Method | Dashboard Usage |
+|----------|--------|-----------------|
+| `/api/gateway/status` | GET | Health check polling |
+| `/api/events` | GET | Event list fetching |
+
+## Boundary Rules
+- ✅ Re-export cursor functions from contracts
+- ❌ No `btoa`/`atob` usage
+- ❌ No contract logic reimplementation
+- ✅ All external calls via DataSource abstraction
 
 ## Data Flow
 
 ```mermaid
-sequenceDiagram
-    participant UI as Dashboard UI
-    participant DS as DataSource
-    participant API as Gateway API
-    participant BC as blockchain.json
-    
-    UI->>DS: Request events
-    DS->>API: GET /api/events
-    API->>BC: Reload from disk
-    BC-->>API: Block data
-    API->>API: Map MCP → AuditEvent
-    API-->>DS: Events array
-    DS-->>UI: Render charts
-```
-
-## Components
-
-```mermaid
 graph TD
-    subgraph Pages
-        Home["/"]
-        Audit["/audit"]
-    end
-    
-    subgraph Components
-        KPI[KPIGrid]
-        Denial[DenialTaxonomyChart]
-        Volume[RequestVolumeChart]
-        Feed[ActivityFeed]
-        Drawer[ProofDrawer]
-        Table[AuditTable]
-    end
-    
-    subgraph DataLayer
-        DS[DataSource]
-        HttpDS[HttpDataSource]
-        MockDS[MockDataSource]
-    end
-    
-    Home --> KPI & Denial & Volume & Feed
-    Audit --> Table
-    Feed --> Drawer
-    KPI & Denial & Volume & Feed & Table --> DS
-    DS --> HttpDS
-    DS --> MockDS
+    User[User Browser] --> Dashboard[Next.js Dashboard]
+    Dashboard --> DataSource[HttpDataSource]
+    DataSource --> |HTTP| Gateway[EXTERNAL: Gateway API]
+    Dashboard --> |imports| Contracts[EXTERNAL: @talosprotocol/contracts]
 ```
-
-## Persistence
-
-Data persists to `~/.talos/blockchain.json`:
-
-1. **External traffic** (TrafficGen, P2P, Connector) writes `mcp_request` events
-2. **API Server** reloads blockchain on each query
-3. **BlockchainAuditStore** maps raw MCP → AuditEvent format
-4. **Dashboard** displays unified event stream
-
-## Technology Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 14 (App Router) |
-| UI | React 18, Tailwind CSS |
-| Charts | Recharts |
-| State | React hooks |
-| API | FastAPI (separate service) |
