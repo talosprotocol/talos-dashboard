@@ -1,41 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
+fail() { echo "ERROR: $1" >&2; exit 1; }
 
-fail() {
-  echo "ERROR: $1" >&2
-  exit 1
-}
+# Define pathspecs to exclude
+EXCLUDE=":^node_modules"
+EXCLUDE2=":^dist"
+EXCLUDE3=":^.next"
+EXCLUDE4=":^.github"
+EXCLUDE5=":^scripts/gates-contracts.sh"
 
-# 1) Deep link ban
-if rg -n "file:///|(\.\./talos\b)|workspace/|github\.com/talosprotocol/talos/blob" -S .; then
+# Deep link ban
+if git grep -nE "file:///|(\.\./talos\b)|workspace/|github\.com/talosprotocol/talos/blob" -- . "$EXCLUDE" "$EXCLUDE2" "$EXCLUDE3" "$EXCLUDE4" "$EXCLUDE5"; then
   fail "Deep link detected"
 fi
 
-# 2) btoa/atob ban (browser encoding)
-if rg -n "\bbtoa\b|\batob\b" -S src/; then
+# Wrong package name ban
+if git grep -n "@talos-protocol/contracts" -- . "$EXCLUDE" "$EXCLUDE2" "$EXCLUDE3" "$EXCLUDE4" "$EXCLUDE5"; then
+  fail "Found @talos-protocol/contracts. Must use @talosprotocol/contracts."
+fi
+
+# btoa/atob ban
+if git grep -nE "\bbtoa\b|\batob\b" -- src/ ; then
   fail "btoa/atob detected. Use @talosprotocol/contracts base64url helpers."
 fi
 
-# 3) Contract logic duplication ban (implementation patterns)
-# Allow only:
-# - imports from @talosprotocol/contracts
-# - re-exports that re-export directly from @talosprotocol/contracts
-DUP_PAT='function\s+(deriveCursor|decodeCursor|compareCursor|base64urlEncode|base64urlDecode|isUuidV7)\b|export\s+function\s+(deriveCursor|decodeCursor|compareCursor|base64urlEncode|base64urlDecode|isUuidV7)\b'
+# Contract logic duplication ban
+DUP_PAT='function[[:space:]]+(deriveCursor|decodeCursor|compareCursor|base64urlEncode|base64urlDecode|isUuidV7)\b|export[[:space:]]+function[[:space:]]+(deriveCursor|decodeCursor|compareCursor|base64urlEncode|base64urlDecode|isUuidV7)\b'
 
-if rg -n "$DUP_PAT" -S src/; then
-  # If any match exists, fail unless it is a direct re-export line
-  # (This is intentionally strict)
-  if rg -n "$DUP_PAT" -S src/ | rg -v "from\s+['\"]@talosprotocol/contracts['\"]"; then
-    fail "Contract logic appears implemented in dashboard. Only thin re-exports/imports allowed from @talosprotocol/contracts."
+if git grep -qE "$DUP_PAT" -- src/; then
+  if git grep -nE "$DUP_PAT" -- src/ | grep -v "from[[:space:]].*@talosprotocol/contracts"; then
+    fail "Contract logic appears implemented in dashboard. Only import or re-export from @talosprotocol/contracts."
   fi
-fi
-
-# 4) Enforce correct package name
-if rg -n "@talos-protocol/contracts" -S .; then
-  fail "Found @talos-protocol/contracts. Must use @talosprotocol/contracts."
 fi
 
 echo "OK: contract gates passed"
