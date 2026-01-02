@@ -1,14 +1,29 @@
 {
   "name": "dashboard",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier -w .",
     "test": "vitest run",
+    "test:unit": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "version:sync": "node ./scripts/version-sync.mjs",
+    "gates:contracts": "bash ./scripts/contract-gates.sh",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier -w"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier -w"
+    ]
   },
   "dependencies": {
     "@talosprotocol/contracts": "^1.0.0",
@@ -32,6 +47,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.7.4",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.16"
