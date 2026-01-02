@@ -46,31 +46,16 @@ export interface DataSource {
 
 // --- Cursor Utils ---
 
-import { validateCursor } from "../integrity/cursor";
+import { validateCursor, deriveCursor, decodeCursor } from "../integrity/cursor";
 
-// --- Cursor Utils ---
+// encodeCursor is now deriveCursor from contracts
+// decodeCursor is now from contracts (returns { timestamp, event_id })
 
-function encodeCursor(timestamp: number, eventId: string): string {
-    const raw = `${timestamp}:${eventId}`;
-    if (typeof window !== "undefined") {
-        return window.btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    }
-    return Buffer.from(raw).toString("base64url");
-}
-
-function decodeCursor(cursor: string): { timestamp: number; eventId: string } | null {
+// Wrapper for backwards compatibility with old API shape
+function decodeCursorCompat(cursor: string): { timestamp: number; eventId: string } | null {
     try {
-        let raw: string;
-        if (typeof window !== "undefined") {
-            // Re-add padding might be needed for strict atob, but usually fine
-            raw = window.atob(cursor.replace(/-/g, '+').replace(/_/g, '/'));
-        } else {
-            raw = Buffer.from(cursor, "base64url").toString();
-        }
-
-        const parts = raw.split(":");
-        if (parts.length !== 2) return null;
-        return { timestamp: parseInt(parts[0], 10), eventId: parts[1] };
+        const result = decodeCursor(cursor);
+        return { timestamp: result.timestamp, eventId: result.event_id };
     } catch {
         return null;
     }
@@ -160,7 +145,7 @@ class MockDataSource implements DataSource {
 
         // Apply Cursor (Pagination)
         if (cursor) {
-            const decoded = decodeCursor(cursor);
+            const decoded = decodeCursorCompat(cursor);
             if (decoded) {
                 // Find split point: Older than timestamp (DESC)
                 // Or same timestamp but smaller ID
@@ -177,7 +162,7 @@ class MockDataSource implements DataSource {
 
         return {
             items,
-            next_cursor: lastItem ? encodeCursor(lastItem.timestamp, lastItem.event_id) : undefined,
+            next_cursor: lastItem ? deriveCursor(lastItem.timestamp, lastItem.event_id) : undefined,
             has_more: subset.length > limit,
         };
     }
@@ -191,7 +176,7 @@ class MockDataSource implements DataSource {
                 ...randomEvent,
                 event_id: `evt_live_${Date.now()}`,
                 timestamp: Math.floor(Date.now() / 1000),
-                cursor: encodeCursor(Math.floor(Date.now() / 1000), `evt_live_${Date.now()}`)
+                cursor: deriveCursor(Math.floor(Date.now() / 1000), `evt_live_${Date.now()}`)
             };
             cb({ type: "audit_event", event: newEvent });
         }, 5000);

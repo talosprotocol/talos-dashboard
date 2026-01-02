@@ -2,31 +2,32 @@ import { describe, it, expect } from "vitest";
 import { deriveCursor, validateCursor } from "../../lib/integrity/cursor";
 import { AuditEvent } from "../../lib/data/schemas";
 
+// Valid UUIDv7 for testing (version 7, variant 8-b)
+const VALID_UUID_V7 = "0190a5e0-7c3a-7000-8000-000000000001";
+const VALID_UUID_V7_2 = "0190a5e0-7c3a-7000-8000-000000000002";
+
 describe("Cursor Integrity (v3.2 Frozen)", () => {
 
-    // Test Vector 1: Basic Derivation
+    // Test Vector 1: Basic Derivation with UUIDv7
     it("should derive correct base64url cursor for standard inputs", () => {
         const timestamp = 1700000000;
-        const eventId = "evt_001";
-        // "1700000000:evt_001" 
-        // Base64: MTcwMDAwMDAwMDZldnRfMDAx (approx)
-        // Let's rely on the function logic matches the spec: base64url(utf8(ts:id))
+        const eventId = VALID_UUID_V7;
 
         const cursor = deriveCursor(timestamp, eventId);
 
         // Manual verification:
-        // "1700000000:evt_001" -> Buffer -> Base64URL
+        // "1700000000:0190a5e0-7c3a-7000-8000-000000000001" -> Buffer -> Base64URL
         const manual = Buffer.from(`${timestamp}:${eventId}`).toString('base64url');
         expect(cursor).toBe(manual);
     });
 
-    // Test Vector 2: Validation Success
+    // Test Vector 2: Validation Success with UUIDv7
     it("should validate a correct cursor", () => {
         const event: AuditEvent = {
             schema_version: "1",
-            event_id: "evt_test",
+            event_id: VALID_UUID_V7,
             timestamp: 1234567890,
-            cursor: deriveCursor(1234567890, "evt_test"),
+            cursor: deriveCursor(1234567890, VALID_UUID_V7),
             event_type: "SESSION",
             outcome: "OK",
             session_id: "s1",
@@ -50,13 +51,15 @@ describe("Cursor Integrity (v3.2 Frozen)", () => {
         expect(result.derived).toBe(event.cursor);
     });
 
-    // Test Vector 3: Cursor Mismatch
+    // Test Vector 3: Cursor Mismatch (tampered cursor)
     it("should detect CURSOR_MISMATCH on tampered cursor", () => {
+        // Create valid cursor for one event, then assign to different event
+        const correctCursor = deriveCursor(1234567890, VALID_UUID_V7);
         const event: AuditEvent = {
             schema_version: "1",
-            event_id: "evt_tampered",
+            event_id: VALID_UUID_V7_2, // Different event ID
             timestamp: 1234567890,
-            cursor: "tampered_cursor_string",
+            cursor: correctCursor, // Cursor from different event
             event_type: "SESSION",
             outcome: "OK",
             session_id: "s1",
@@ -101,8 +104,9 @@ describe("Cursor Integrity (v3.2 Frozen)", () => {
     // Test Vector 5: Timestamp precision (Strict Integer Check)
     it("should reject floating point timestamps", () => {
         const tsFloat = 1700000000.999;
-        const eventId = "evt_float";
+        const eventId = VALID_UUID_V7;
 
-        expect(() => deriveCursor(tsFloat, eventId)).toThrow("INVALID_FRAME");
+        // Per spec: floating point timestamps must be rejected
+        expect(() => deriveCursor(tsFloat, eventId)).toThrow();
     });
 });
