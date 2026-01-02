@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# 1) Version bump every commit
+node scripts/version-sync.mjs
+git add package.json
+
+# Optional: keep lockfile consistent if you use pnpm
+if [ -f pnpm-lock.yaml ]; then
+  pnpm -s install --lockfile-only
+  git add pnpm-lock.yaml
+fi
+
+# 2) Lint staged
+if [ -f package.json ]; then
+  # You can replace with npm/yarn if needed
+  # Using standard lint-staged command (npx lint-staged allows using without global install)
+  npx lint-staged
+fi
+
+# 3) Typecheck + tests
+# Assuming npm/npx environment since pnpm not strictly enforced in prompts
+npm run typecheck
+npm test
+
+# 4) Dashboard-only gates if script exists
+if [ -f scripts/gates-contracts.sh ]; then
+  npm run gates:contracts
+fi

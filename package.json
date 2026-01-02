@@ -1,6 +1,6 @@
 {
   "name": "dashboard",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,8 +13,7 @@
     "test:unit": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "version:sync": "node ./scripts/version-sync.mjs",
-    "gates:contracts": "bash ./scripts/contract-gates.sh",
-    "prepare": "husky"
+    "gates:contracts": "bash ./scripts/gates-contracts.sh"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -46,7 +45,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "prettier": "^3.7.4",
     "tailwindcss": "^4",
