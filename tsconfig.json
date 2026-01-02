@@ -25,12 +25,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@talosprotocol/contracts": [
-        "../../talos-contracts/typescript/dist/index.d.ts"
-      ],
-      "@talosprotocol/contracts/*": [
-        "../../talos-contracts/typescript/dist/*"
       ]
     }
   },
