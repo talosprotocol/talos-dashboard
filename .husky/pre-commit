@@ -1,1 +1,28 @@
+#!/bin/sh
+echo "🔍 Running pre-commit validation..."
+
+# 1. Lint
+echo "Running ESLint..."
 npm run lint
+if [ $? -ne 0 ]; then
+    echo "❌ Lint failed"
+    exit 1
+fi
+
+# 2. Contract compliance gates
+echo "Running contract compliance gates..."
+bash scripts/ci-gates.sh
+if [ $? -ne 0 ]; then
+    echo "❌ Contract compliance failed"
+    exit 1
+fi
+
+# 3. Tests
+echo "Running tests..."
+npm test
+if [ $? -ne 0 ]; then
+    echo "❌ Tests failed"
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed"
