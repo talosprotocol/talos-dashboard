@@ -32,6 +32,12 @@ export default function OverviewPage() {
             </div>
             <div className="flex items-center gap-4">
               <StatusBanners />
+              <a
+                href="/chat"
+                className="px-4 py-2 bg-[var(--text-primary)] text-[var(--background)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Secure Chat
+              </a>
               <ThemeToggle />
             </div>
           </div>

@@ -14,6 +14,8 @@ if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
 fi
 
 echo "Starting $SERVICE_NAME on port $PORT..."
+export NEXT_PUBLIC_TALOS_DATA_MODE="HTTP"
+export NEXT_PUBLIC_API_URL="http://localhost:8080"
 npm run dev -- --port "$PORT" > "/tmp/${SERVICE_NAME}.log" 2>&1 &
 echo $! > "$PID_FILE"
 sleep 3
