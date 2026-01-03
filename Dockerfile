@@ -9,8 +9,12 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies using secret for private package auth
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
+# Accept NPM_TOKEN as build arg for private package auth
+ARG NPM_TOKEN
+RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > .npmrc && \
+    echo "@talosprotocol:registry=https://npm.pkg.github.com" >> .npmrc && \
+    npm ci && \
+    rm -f .npmrc
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
