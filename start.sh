@@ -1,13 +1,4 @@
-#!/bin/bash
-set -e
-cd "$(dirname "$0")"
-
-echo "🚀 Starting Security Dashboard..."
-
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    npm install
-fi
-
-echo "▶️  Running Dev Server..."
-npm run dev
+#!/usr/bin/env bash
+set -euo pipefail
+echo "DEPRECATED: Use ./scripts/start.sh (this wrapper will be removed in a future release)." >&2
+exec "$(cd "$(dirname "$0")" && pwd)/scripts/start.sh" "$@"
