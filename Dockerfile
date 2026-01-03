@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Talos Dashboard - Dockerfile
 # Multi-stage build for Next.js
 
@@ -5,16 +6,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Accept NPM token for GitHub Packages
-ARG NPM_TOKEN
-
-# Configure GitHub Packages auth
-RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > .npmrc && \
-    echo "@talosprotocol:registry=https://npm.pkg.github.com" >> .npmrc
-
+# Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
-RUN rm -f .npmrc
+
+# Install dependencies using secret for private package auth
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -26,6 +22,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Build requires standalone output for Docker
 RUN npm run build
 
 # Stage 3: Production
