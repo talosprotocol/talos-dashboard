@@ -50,6 +50,7 @@ export default function ChatPage() {
         })),
         max_tokens: 512,
         client_request_id: `req_${Date.now()}`,
+        capability: "cap_demo", // Default capability for demo mode
       };
 
       const response = await fetch(`${gatewayUrl}/mcp/tools/chat`, {
@@ -64,6 +65,15 @@ export default function ChatPage() {
       }
 
       const data = await response.json();
+
+      // Handle structured error responses from gateway (e.g., Ollama unavailable)
+      if (data.code || data.error) {
+        const errorCode = data.code || data.error?.code || "UNKNOWN";
+        const errorMsg =
+          data.message || data.error?.message || "Unknown backend error";
+        throw new Error(`[${errorCode}] ${errorMsg}`);
+      }
+
       if (data.messages && data.messages.length > 0) {
         const botMsg = data.messages[0];
         setMessages((prev) => [
