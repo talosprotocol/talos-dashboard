@@ -42,3 +42,6 @@ tsconfig.tsbuildinfo
 # Package manager
 package-lock.json
 
+
+# Cache
+.eslintcache
