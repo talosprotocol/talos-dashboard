@@ -12,12 +12,12 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDataSource } from "@/lib/hooks/useDataSource";
 
 export default function OverviewPage() {
-  const { stats, events, loading, hasMore, loadMore, loadingMore } = useDataSource();
+  const { stats, events, loading, hasMore, loadMore, loadingMore } =
+    useDataSource();
 
   return (
     <main className="min-h-screen bg-[var(--bg)] p-8 font-sans text-[var(--text-primary)]">
       <div className="max-w-7xl mx-auto space-y-8">
-
         {/* Header */}
         <header className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -26,14 +26,18 @@ export default function OverviewPage() {
                 <TalosLogo className="w-8 h-8" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Security Console</h1>
-                <p className="text-[var(--text-muted)] text-sm">Talos Protocol v3.2 // Dashboard</p>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  Security Console
+                </h1>
+                <p className="text-[var(--text-muted)] text-sm">
+                  Talos Protocol v3.2 // Dashboard
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <StatusBanners />
               <a
-                href="/chat"
+                href="/examples/chat"
                 className="px-4 py-2 bg-[var(--text-primary)] text-[var(--background)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
               >
                 Secure Chat
