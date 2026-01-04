@@ -1,0 +1,181 @@
+/**
+ * Talos Dashboard - Status Aggregate API Route
+ * 
+ * Server-side endpoint that checks downstream service health.
+ * Returns normalized status without exposing internal topology.
+ * 
+ * @route GET /api/status/aggregate
+ */
+
+import { NextResponse } from "next/server";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+type ServiceStatus = "online" | "offline" | "unknown";
+
+interface ServiceResult {
+    name: string;
+    status: ServiceStatus;
+    latency_ms?: number;
+    error_code?: string;
+}
+
+interface StatusResponse {
+    services: ServiceResult[];
+    aggregateStatus: "healthy" | "degraded" | "unknown";
+    timestamp: number;
+}
+
+// =============================================================================
+// Configuration
+// =============================================================================
+
+/**
+ * Service configuration from environment variables.
+ * Defaults are for local development ONLY.
+ */
+const SERVICES = [
+    {
+        name: "gateway",
+        url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8080",
+        endpoint: "/api/gateway/status",
+    },
+    {
+        name: "audit",
+        url: process.env.TALOS_AUDIT_URL ?? "http://localhost:8081",
+        endpoint: "/health",
+    },
+    {
+        name: "connector",
+        url: process.env.TALOS_CONNECTOR_URL ?? "http://localhost:8082",
+        endpoint: "/health",
+    },
+    {
+        name: "ollama",
+        url: process.env.OLLAMA_URL ?? "http://localhost:11434",
+        endpoint: "/api/tags",
+    },
+];
+
+// Per-service timeout (ms) - prevents hanging on slow/dead services
+const SERVICE_TIMEOUT_MS = 3000;
+
+// =============================================================================
+// Service Check Logic
+// =============================================================================
+
+async function checkService(config: typeof SERVICES[number]): Promise<ServiceResult> {
+    const { name, url, endpoint } = config;
+
+    // Handle misconfigured services
+    if (!url) {
+        return {
+            name,
+            status: "unknown",
+            error_code: "NOT_CONFIGURED",
+        };
+    }
+
+    const start = Date.now();
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SERVICE_TIMEOUT_MS);
+
+        const response = await fetch(`${url}${endpoint}`, {
+            method: "GET",
+            signal: controller.signal,
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+
+        clearTimeout(timeoutId);
+        const latency_ms = Date.now() - start;
+
+        if (response.ok) {
+            return {
+                name,
+                status: "online",
+                latency_ms,
+            };
+        }
+
+        // Non-2xx response
+        return {
+            name,
+            status: "offline",
+            latency_ms,
+            error_code: `HTTP_${response.status}`,
+        };
+
+    } catch (error: unknown) {
+        const latency_ms = Date.now() - start;
+
+        // Determine error type
+        let error_code = "FETCH_ERROR";
+
+        if (error instanceof Error) {
+            if (error.name === "AbortError") {
+                error_code = "TIMEOUT";
+            } else if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+                error_code = "CONNECTION_REFUSED";
+            }
+        }
+
+        return {
+            name,
+            status: "offline",
+            latency_ms,
+            error_code,
+        };
+    }
+}
+
+/**
+ * Compute aggregate status from individual results.
+ */
+function computeAggregateStatus(results: ServiceResult[]): "healthy" | "degraded" | "unknown" {
+    if (results.length === 0) {
+        return "unknown";
+    }
+
+    const onlineCount = results.filter(r => r.status === "online").length;
+    const unknownCount = results.filter(r => r.status === "unknown").length;
+
+    if (onlineCount === results.length) {
+        return "healthy";
+    }
+
+    if (unknownCount === results.length) {
+        return "unknown";
+    }
+
+    if (onlineCount > 0) {
+        return "degraded";
+    }
+
+    return "degraded"; // All offline
+}
+
+// =============================================================================
+// Route Handler
+// =============================================================================
+
+export async function GET(): Promise<NextResponse<StatusResponse>> {
+    const results = await Promise.all(SERVICES.map(checkService));
+
+    const response: StatusResponse = {
+        services: results,
+        aggregateStatus: computeAggregateStatus(results),
+        timestamp: Date.now(),
+    };
+
+    return NextResponse.json(response, {
+        headers: {
+            "Cache-Control": "no-store, max-age=0",
+        },
+    });
+}
