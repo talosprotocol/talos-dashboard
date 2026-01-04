@@ -7,10 +7,17 @@ import Link from "next/link";
 export default function ExamplesPage() {
   const examples = [
     {
-      title: "Secure AI Chat",
+      title: "Secure AI Agent Chat",
       description:
         "End-to-end audited LLM interaction using Talos Protocol capabilities.",
       link: "/examples/chat",
+      status: "ready",
+    },
+    {
+      title: "MCP Status Dashboard",
+      description:
+        "Real-time monitoring of all configured MCP downstream services.",
+      link: "/examples/mcp-status",
       status: "ready",
     },
     {

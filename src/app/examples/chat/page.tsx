@@ -17,10 +17,31 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null); // null = checking
   const [sessionId] = useState(
     () => `sess_${Math.random().toString(36).substring(2, 10)}`,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const gatewayUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+  // Check backend health on mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch(`${gatewayUrl}/api/gateway/status`, {
+          method: "GET",
+        });
+        setBackendOnline(res.ok);
+      } catch {
+        setBackendOnline(false);
+      }
+    };
+    checkHealth();
+    // Re-check every 30 seconds
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, [gatewayUrl]);
 
   // Auto-scroll
   useEffect(() => {
@@ -30,7 +51,7 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !backendOnline) return;
 
     const userMsg: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMsg]);
@@ -38,9 +59,6 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const gatewayUrl =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
       const payload = {
         session_id: sessionId,
         model: "llama3.2:latest",
@@ -108,13 +126,25 @@ export default function ChatPage() {
     <main className="min-h-screen bg-[var(--bg)] p-8 font-sans text-[var(--text-primary)]">
       <div className="max-w-4xl mx-auto space-y-6">
         <PageHeader
-          title="Secure AI Chat"
+          title="Secure AI Agent Chat"
           subtitle={`Session: ${sessionId}`}
           actions={
             <div className="flex items-center gap-4">
-              <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded border border-emerald-500/20 tracking-wider">
-                AUDITED
-              </span>
+              {backendOnline === false && (
+                <span className="px-2 py-1 bg-red-500/10 text-red-500 text-[10px] font-bold rounded border border-red-500/20 tracking-wider">
+                  OFFLINE
+                </span>
+              )}
+              {backendOnline === null && (
+                <span className="px-2 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold rounded border border-amber-500/20 tracking-wider">
+                  CHECKING...
+                </span>
+              )}
+              {backendOnline === true && (
+                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold rounded border border-emerald-500/20 tracking-wider">
+                  AUDITED
+                </span>
+              )}
               <Link
                 href="/examples"
                 className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
@@ -201,7 +231,7 @@ export default function ChatPage() {
               />
               <button
                 onClick={handleSend}
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || !backendOnline}
                 className="bg-[var(--text-primary)] text-[var(--bg)] px-5 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
               >
                 Send
