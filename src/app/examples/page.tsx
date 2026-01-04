@@ -1,7 +1,7 @@
 "use client";
 
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { TalosLogo } from "@/components/ui/TalosLogo";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 
 export default function ExamplesPage() {
@@ -25,23 +25,18 @@ export default function ExamplesPage() {
   return (
     <main className="min-h-screen bg-[var(--bg)] p-8 font-sans text-[var(--text-primary)]">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <header className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="p-2 bg-[var(--accent)]/10 rounded-lg border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"
-          >
-            <TalosLogo className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Examples Catalog
-            </h1>
-            <p className="text-[var(--text-muted)] text-sm">
-              Interactive demonstrations of the Talos Protocol
-            </p>
-          </div>
-        </header>
+        <PageHeader
+          title="Examples Catalog"
+          subtitle="Interactive demonstrations of the Talos Protocol"
+          actions={
+            <Link
+              href="/"
+              className="text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              Back to Console
+            </Link>
+          }
+        />
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -78,15 +73,6 @@ export default function ExamplesPage() {
               )}
             </GlassPanel>
           ))}
-        </div>
-
-        <div className="pt-8 border-t border-[var(--panel-border)]">
-          <Link
-            href="/"
-            className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            ← Back to Security Console
-          </Link>
         </div>
       </div>
     </main>

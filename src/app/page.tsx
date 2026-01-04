@@ -6,10 +6,9 @@ import { StatusBanners } from "@/components/dashboard/StatusBanners";
 import { DenialTaxonomyChart } from "@/components/dashboard/DenialTaxonomyChart";
 import { RequestVolumeChart } from "@/components/dashboard/RequestVolumeChart";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { TalosLogo } from "@/components/ui/TalosLogo";
-
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDataSource } from "@/lib/hooks/useDataSource";
+
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function OverviewPage() {
   const { stats, events, loading, hasMore, loadMore, loadingMore } =
@@ -18,34 +17,19 @@ export default function OverviewPage() {
   return (
     <main className="min-h-screen bg-[var(--bg)] p-8 font-sans text-[var(--text-primary)]">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
-        <header className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[var(--accent)]/10 rounded-lg border border-[var(--accent)]/20 shadow-sm">
-                <TalosLogo className="w-8 h-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  Security Console
-                </h1>
-                <p className="text-[var(--text-muted)] text-sm">
-                  Talos Protocol v3.2 // Dashboard
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <StatusBanners />
-              <a
-                href="/examples/chat"
-                className="px-4 py-2 bg-[var(--text-primary)] text-[var(--background)] rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                Secure Chat
-              </a>
-              <ThemeToggle />
-            </div>
-          </div>
-        </header>
+        <PageHeader
+          title="Security Console"
+          subtitle="Talos Protocol v3.2 // Dashboard"
+          center={<StatusBanners />}
+          actions={
+            <a
+              href="/examples/chat"
+              className="px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-lg text-sm font-semibold hover:bg-[var(--accent)]/10 transition-all shadow-sm shadow-[var(--accent-glow)]"
+            >
+              Secure Chat
+            </a>
+          }
+        />
 
         {/* Content */}
         {loading || !stats ? (

@@ -45,7 +45,7 @@ export default function RootLayout({
                     Examples Catalog
                   </a>
                   <a
-                    href="https://github.com/talosprotocol/talos"
+                    href="https://github.com/talosprotocol/talos/tree/main/docs/wiki"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-[var(--text-primary)] transition-colors"
