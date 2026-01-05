@@ -40,7 +40,15 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "demos",
         parent: null,
     },
+    "/examples/chat": {
+        label: "Secure Chat",
+        icon: "💬",
+        ariaLabel: "Secure AI Agent Chat",
+        group: "demos",
+        parent: "/examples",
+    },
 };
+
 
 
 /**
