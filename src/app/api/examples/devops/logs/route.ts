@@ -2,31 +2,36 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const TIMEOUT_MS = 15000;
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8100";
+const TIMEOUT_MS = 5000;
+const AIOPS_URL = process.env.TALOS_AIOPS_URL ?? "http://localhost:8200";
+
+// --- Schema Validation ---
+// Logs should be an array of strings or log objects
 
 /**
- * GET /api/examples/chat/summary
- * Proxy to {CHAT_URL}/v1/chat/summary
+ * GET /api/examples/devops/logs
+ * Proxy to {AIOPS_URL}/v1/logs?limit=200
  */
 export async function GET(req: Request) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const { searchParams } = new URL(req.url);
+  const limit = searchParams.get("limit") ?? "200";
 
   try {
-    const res = await fetch(`${CHAT_URL}/v1/chat/summary`, {
+    const res = await fetch(`${AIOPS_URL}/v1/logs?limit=${limit}`, {
       method: "GET",
       signal: controller.signal,
       cache: "no-store",
     });
 
     const data = await res.json();
-    // Validation: Ensure summary fields exist
-    if (!data.message_count || !data.session_id) {
+    // Validation: Ensure it is an array
+    if (!Array.isArray(data)) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_UPSTREAM_RESPONSE",
-          details: { reason: "missing_summary_fields" },
+          details: { reason: "logs_must_be_array" },
         },
         { status: 502, headers: { "Cache-Control": "no-store" } },
       );

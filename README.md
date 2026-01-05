@@ -28,10 +28,21 @@ graph TD
 ## Evaluation
 Evaluation: N/A for this repo.
 
+## Configuration
+
+The dashboard is configured via environment variables (or `.env.local`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TALOS_GATEWAY_URL` | `http://localhost:8000` | URL of the main Talos Gateway |
+| `TALOS_CHAT_URL` | `http://localhost:8100` | URL of the Secure Chat Agent |
+| `TALOS_AIOPS_URL` | `http://localhost:8200` | URL of the DevOps Agent |
+
 ## Usage
 ### Quickstart
 ```bash
 npm run dev
+# Open http://localhost:3000
 ```
 
 ## Operational Interface

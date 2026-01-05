@@ -2,31 +2,31 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 5000;
 const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8100";
 
 /**
- * GET /api/examples/chat/summary
- * Proxy to {CHAT_URL}/v1/chat/summary
+ * GET /api/examples/chat/health
+ * Proxy to {CHAT_URL}/health
  */
 export async function GET(req: Request) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(`${CHAT_URL}/v1/chat/summary`, {
+    const res = await fetch(`${CHAT_URL}/health`, {
       method: "GET",
       signal: controller.signal,
       cache: "no-store",
     });
 
     const data = await res.json();
-    // Validation: Ensure summary fields exist
-    if (!data.message_count || !data.session_id) {
+    // Validation: Ensure minimal health fields per charter
+    if (!data.app || !data.contract_hash) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_UPSTREAM_RESPONSE",
-          details: { reason: "missing_summary_fields" },
+          details: { reason: "missing_health_fields" },
         },
         { status: 502, headers: { "Cache-Control": "no-store" } },
       );

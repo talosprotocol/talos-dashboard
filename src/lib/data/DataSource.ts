@@ -206,7 +206,7 @@ const BACKFILL_MAX_EVENTS = 1000;
 const BACKFILL_PAGE_SIZE = 100;
 
 export class HttpDataSource implements DataSource {
-    private baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    private baseUrl = "http://localhost:8000";
 
     async getGatewayStatus(): Promise<GatewayStatus> {
         const res = await fetch(`${this.baseUrl}/api/gateway/status`);

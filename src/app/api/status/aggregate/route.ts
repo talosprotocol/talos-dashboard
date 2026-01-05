@@ -44,7 +44,7 @@ interface StatusResponse {
 const SERVICES = [
   {
     name: "gateway",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8080",
+    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
     endpoint: "/api/gateway/status",
   },
   {

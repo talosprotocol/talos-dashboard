@@ -4,25 +4,23 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const TIMEOUT_MS = 30000;
-const MAX_BODY = 64 * 1024; // 64KB
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://127.0.0.1:8100";
+const AIOPS_URL = process.env.TALOS_AIOPS_URL ?? "http://localhost:8200";
 
 // --- Schema Validation ---
 
-const SendRequestSchema = z.object({
-  content: z.string().min(1).max(4096),
+const TriggerRequestSchema = z.object({
+  action: z.enum(["plan_deploy_verify", "deny_demo", "status_only"]),
 });
 
-const SendResponseSchema = z.object({
-  response: z.string(),
-  message_id: z.string(),
-  conversation_id: z.string(),
-  secure: z.boolean(),
+const TriggerResponseSchema = z.object({
+  job_id: z.string(),
+  status: z.enum(["queued", "running", "completed", "failed", "denied"]),
+  message: z.string().optional(),
 });
 
 /**
- * POST /api/examples/chat/send
- * Proxy to {CHAT_URL}/v1/chat/send
+ * POST /api/examples/devops/trigger
+ * Proxy to {AIOPS_URL}/v1/trigger
  */
 export async function POST(req: Request) {
   const controller = new AbortController();
@@ -41,68 +39,37 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Body Size Limit
-    const bodyText = await req.text();
-    const bytes = new TextEncoder().encode(bodyText).length;
-    if (bytes > MAX_BODY) {
-      return NextResponse.json(
-        {
-          code: "TALOS_INVALID_INPUT",
-          details: { reason: "payload_too_large" },
-        },
-        { status: 413, headers: { "Cache-Control": "no-store" } },
-      );
-    }
-
-    // 3. Schema Validation (Request)
+    // 2. Request Schema Validation
     let bodyJson;
     try {
+      const bodyText = await req.text();
       bodyJson = JSON.parse(bodyText);
-      SendRequestSchema.parse(bodyJson);
+      TriggerRequestSchema.parse(bodyJson);
     } catch (e) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_INPUT",
-          details: { reason: "schema_validation_failed" },
+          details: { reason: "schema_validation_failed", error: e },
         },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
 
-    // Inject session_id for Demo Mode
-    // The simplified UI sends { content } but backend expects session-aware payload
-    const upstreamBody = {
-        ...bodyJson, // { content: "..." }
-        session_id: "demo-session-v1" 
-    };
-
-    // 4. Upstream Request
-    const res = await fetch(`${CHAT_URL}/v1/chat/send`, {
+    // 3. Upstream Request
+    const res = await fetch(`${AIOPS_URL}/v1/trigger`, {
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(upstreamBody),
+      body: JSON.stringify(bodyJson),
       cache: "no-store",
     });
 
-    // 5. Upstream Validation
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.startsWith("application/json")) {
-      return NextResponse.json(
-        {
-          code: "TALOS_INVALID_UPSTREAM_RESPONSE",
-          details: { reason: "non_json_response" },
-        },
-        { status: 502, headers: { "Cache-Control": "no-store" } },
-      );
-    }
-
+    // 4. Upstream Validation
     const data = await res.json();
 
-    // 6. Schema Validation (Response)
     try {
       if (res.ok) {
-        SendResponseSchema.parse(data);
+        TriggerResponseSchema.parse(data);
       }
     } catch (e) {
       return NextResponse.json(

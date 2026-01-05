@@ -125,7 +125,7 @@ const STATUS_STYLES: Record<ExampleStatus, { bg: string; text: string; label: st
 };
 
 function ExampleCard({ example }: Readonly<{ example: Example }>) {
-    const style = STATUS_STYLES[example.status];
+    const style = STATUS_STYLES[example.status] || STATUS_STYLES["not-configured"];
     const isActive = example.status === "online";
 
     return (
