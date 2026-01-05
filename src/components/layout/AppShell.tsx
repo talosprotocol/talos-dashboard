@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { getNavItems, getBreadcrumbs, isActiveRoute } from "@/lib/navRegistry";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useRef, useCallback, ReactNode, KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, ReactNode } from "react";
 
 // =============================================================================
 // Types
@@ -26,8 +26,8 @@ interface AppShellProps {
 // Configuration
 // =============================================================================
 
-const POLL_INTERVAL = parseInt(process.env.NEXT_PUBLIC_STATUS_POLL_INTERVAL ?? "10000", 10);
-const STALE_THRESHOLD = parseInt(process.env.NEXT_PUBLIC_STATUS_STALE_THRESHOLD ?? "30000", 10);
+const POLL_INTERVAL = Number.parseInt(process.env.NEXT_PUBLIC_STATUS_POLL_INTERVAL ?? "10000", 10);
+const STALE_THRESHOLD = Number.parseInt(process.env.NEXT_PUBLIC_STATUS_STALE_THRESHOLD ?? "30000", 10);
 const DASHBOARD_VERSION = process.env.NEXT_PUBLIC_DASHBOARD_VERSION ?? "0.1.x";
 
 // =============================================================================
@@ -164,8 +164,8 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
                                 aria-current={active ? "page" : undefined}
                                 aria-label={item.ariaLabel}
                                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${active
-                                        ? "bg-[var(--accent)]/10 text-[var(--accent)] border-l-2 border-[var(--accent)]"
-                                        : "text-[var(--text-secondary)] hover:bg-[var(--panel-hover)] hover:text-[var(--text-primary)]"
+                                    ? "bg-[var(--accent)]/10 text-[var(--accent)] border-l-2 border-[var(--accent)]"
+                                    : "text-[var(--text-secondary)] hover:bg-[var(--panel-hover)] hover:text-[var(--text-primary)]"
                                     }`}
                             >
                                 <span className="text-base" aria-hidden="true">{item.icon}</span>
@@ -233,7 +233,7 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
 
                         {/* Right Side */}
                         <div className="flex items-center gap-3">
-                            <HealthIndicator status={globalStatus} isStale={isStale} lastUpdated={lastUpdated} />
+                            <HealthIndicator status={globalStatus} isStale={isStale} />
                             <div className="lg:hidden">
                                 <ThemeToggle />
                             </div>
@@ -281,8 +281,8 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
                                             href={href}
                                             aria-current={active ? "page" : undefined}
                                             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${active
-                                                    ? "bg-[var(--accent)]/10 text-[var(--accent)]"
-                                                    : "text-[var(--text-secondary)]"
+                                                ? "bg-[var(--accent)]/10 text-[var(--accent)]"
+                                                : "text-[var(--text-secondary)]"
                                                 }`}
                                         >
                                             <span aria-hidden="true">{item.icon}</span>
@@ -321,24 +321,23 @@ function HealthDot({ status, isStale }: Readonly<{ status: AggregateStatus; isSt
     return <span className={`w-2 h-2 rounded-full ${colors[status]}`} aria-hidden="true" />;
 }
 
-function HealthIndicator({ status, isStale, lastUpdated }: Readonly<{ status: AggregateStatus; isStale: boolean; lastUpdated: number | null }>) {
-    const config: Record<AggregateStatus, { color: string; bg: string; label: string }> = {
-        healthy: { color: "text-emerald-500", bg: "bg-emerald-500/10", label: "All Systems Operational" },
-        degraded: { color: "text-red-500", bg: "bg-red-500/10", label: "Issues Detected" },
-        unknown: { color: "text-gray-500", bg: "bg-gray-500/10", label: "Status Unknown" },
-        loading: { color: "text-amber-500", bg: "bg-amber-500/10", label: "Checking..." },
+function HealthIndicator({ status, isStale }: Readonly<{ status: AggregateStatus; isStale: boolean }>) {
+    const config: Record<AggregateStatus, { color: string; bg: string; label: string; dot: string }> = {
+        healthy: { color: "text-emerald-500", bg: "bg-emerald-500/10", label: "All Systems Operational", dot: "bg-emerald-500" },
+        degraded: { color: "text-red-500", bg: "bg-red-500/10", label: "Issues Detected", dot: "bg-red-500" },
+        unknown: { color: "text-gray-500", bg: "bg-gray-500/10", label: "Status Unknown", dot: "bg-gray-500" },
+        loading: { color: "text-amber-500", bg: "bg-amber-500/10", label: "Checking...", dot: "bg-amber-500 animate-pulse" },
     };
 
-    const display = isStale ? { color: "text-amber-500", bg: "bg-amber-500/10", label: "Status Stale" } : config[status];
-    const dotColor = isStale ? "bg-amber-500" : status === "healthy" ? "bg-emerald-500" : status === "degraded" ? "bg-red-500" : status === "loading" ? "bg-amber-500 animate-pulse" : "bg-gray-500";
+    const staleConfig = { color: "text-amber-500", bg: "bg-amber-500/10", label: "Status Stale", dot: "bg-amber-500" };
+    const display = isStale ? staleConfig : config[status];
 
     return (
         <div
             className={`hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full text-[10px] font-semibold ${display.bg} ${display.color}`}
-            role="status"
             aria-live="polite"
         >
-            <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} aria-hidden="true" />
+            <span className={`w-1.5 h-1.5 rounded-full ${display.dot}`} aria-hidden="true" />
             {display.label}
         </div>
     );
