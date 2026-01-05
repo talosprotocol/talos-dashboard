@@ -13,9 +13,12 @@ import { useState, useEffect, useCallback } from "react";
  * This page does NOT call downstream services directly.
  */
 
+// Type aliases for repeated unions
+type ServiceStatus = "online" | "offline" | "unknown";
+
 interface CoreService {
     name: string;
-    status: "online" | "offline" | "unknown";
+    status: ServiceStatus;
     latency_ms?: number;
     error_code?: string;
 }
@@ -67,7 +70,8 @@ export default function StatusPage() {
     }, []);
 
     useEffect(() => {
-        fetchStatus();
+        // Schedule initial fetch to avoid synchronous setState in effect
+        queueMicrotask(() => fetchStatus());
         const interval = setInterval(fetchStatus, 10000);
         return () => clearInterval(interval);
     }, [fetchStatus]);
@@ -141,7 +145,7 @@ export default function StatusPage() {
 
 function ServiceCard({ name, status, latency, errorCode }: Readonly<{
     name: string;
-    status: "online" | "offline" | "unknown";
+    status: ServiceStatus;
     latency?: number;
     errorCode?: string;
 }>) {
@@ -163,21 +167,26 @@ function ServiceCard({ name, status, latency, errorCode }: Readonly<{
     );
 }
 
+// Status style config for ResourceCard
+const RESOURCE_STATUS_STYLES: Record<string, string> = {
+    online: "bg-emerald-500/10 text-emerald-500",
+    configured: "bg-blue-500/10 text-blue-500",
+    offline: "bg-red-500/10 text-red-500",
+};
+
 function ResourceCard({ name, type, status, description }: Readonly<{
     name: string;
     type: string;
     status: string;
     description?: string;
 }>) {
+    const styleClass = RESOURCE_STATUS_STYLES[status] ?? "bg-gray-500/10 text-gray-500";
+
     return (
         <div className="p-4 bg-[var(--panel)] rounded-lg border border-[var(--glass-border)]">
             <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold capitalize">{name}</h3>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status === "online" ? "bg-emerald-500/10 text-emerald-500" :
-                        status === "configured" ? "bg-blue-500/10 text-blue-500" :
-                            status === "offline" ? "bg-red-500/10 text-red-500" :
-                                "bg-gray-500/10 text-gray-500"
-                    }`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${styleClass}`}>
                     {status.toUpperCase()}
                 </span>
             </div>
@@ -189,8 +198,8 @@ function ResourceCard({ name, type, status, description }: Readonly<{
     );
 }
 
-function StatusBadge({ status }: Readonly<{ status: "online" | "offline" | "unknown" }>) {
-    const config = {
+function StatusBadge({ status }: Readonly<{ status: ServiceStatus }>) {
+    const config: Record<ServiceStatus, { bg: string; text: string; dot: string; label: string }> = {
         online: { bg: "bg-emerald-500/10", text: "text-emerald-500", dot: "bg-emerald-500", label: "ONLINE" },
         offline: { bg: "bg-red-500/10", text: "text-red-500", dot: "bg-red-500", label: "OFFLINE" },
         unknown: { bg: "bg-gray-500/10", text: "text-gray-500", dot: "bg-gray-500", label: "UNKNOWN" },
