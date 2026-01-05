@@ -15,6 +15,8 @@ export type NavItem = {
 /**
  * Route registry - all navigation items derive from this.
  * Icons are emoji placeholders; replace with lucide icons for production.
+ * 
+ * Note: Examples are in the talos-examples repo, not part of the dashboard.
  */
 export const NAV_REGISTRY: Record<string, NavItem> = {
     "/console": {
@@ -30,27 +32,6 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         ariaLabel: "MCP Status Dashboard",
         group: "core",
         parent: null,
-    },
-    "/examples": {
-        label: "Examples",
-        icon: "🧪",
-        ariaLabel: "Interactive Demos",
-        group: "demos",
-        parent: null,
-    },
-    "/examples/chat": {
-        label: "AI Agent Chat",
-        icon: "💬",
-        ariaLabel: "Secure AI Agent Chat",
-        group: "demos",
-        parent: "/examples",
-    },
-    "/examples/policy": {
-        label: "Policy Explorer",
-        icon: "📜",
-        ariaLabel: "Capability Policy Explorer",
-        group: "demos",
-        parent: "/examples",
     },
 };
 
