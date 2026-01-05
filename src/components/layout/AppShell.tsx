@@ -40,7 +40,7 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
     const [globalStatus, setGlobalStatus] = useState<AggregateStatus>("loading");
     const [lastUpdated, setLastUpdated] = useState<number | null>(null);
     const [isStale, setIsStale] = useState(false);
-    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const mobileMenuRef = useRef<HTMLDialogElement>(null);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
 
     const navItems = getNavItems();
@@ -67,7 +67,8 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
     }, []);
 
     useEffect(() => {
-        fetchStatus();
+        // Schedule initial fetch to avoid synchronous setState in effect
+        queueMicrotask(() => fetchStatus());
         const interval = setInterval(fetchStatus, POLL_INTERVAL);
 
         // Stale detection
@@ -127,10 +128,12 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
         }
     }, [mobileMenuOpen]);
 
-    // Close on route change
+    // Close on route change - only update if currently open
     useEffect(() => {
-        setMobileMenuOpen(false);
-    }, [pathname]);
+        if (mobileMenuOpen) {
+            queueMicrotask(() => setMobileMenuOpen(false));
+        }
+    }, [pathname, mobileMenuOpen]);
 
     // =========================================================================
     // Render
@@ -249,11 +252,11 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
                             onClick={() => setMobileMenuOpen(false)}
                             aria-hidden="true"
                         />
-                        <aside
+                        <dialog
                             ref={mobileMenuRef}
                             id="mobile-nav"
-                            className="absolute left-0 top-0 bottom-0 w-64 bg-[var(--panel)] border-r border-[var(--glass-border)] p-4"
-                            role="dialog"
+                            open={mobileMenuOpen}
+                            className="absolute left-0 top-0 bottom-0 w-64 bg-[var(--panel)] border-r border-[var(--glass-border)] p-4 m-0"
                             aria-modal="true"
                             aria-label="Navigation menu"
                         >
@@ -291,7 +294,7 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
                                     );
                                 })}
                             </nav>
-                        </aside>
+                        </dialog>
                     </div>
                 )}
 
