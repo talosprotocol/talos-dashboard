@@ -16,7 +16,7 @@ export type NavItem = {
  * Route registry - all navigation items derive from this.
  * Icons are emoji placeholders; replace with lucide icons for production.
  * 
- * Note: Examples are in the talos-examples repo, not part of the dashboard.
+ * Note: Examples require backends to be running separately.
  */
 export const NAV_REGISTRY: Record<string, NavItem> = {
     "/console": {
@@ -33,7 +33,15 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "core",
         parent: null,
     },
+    "/examples": {
+        label: "Examples",
+        icon: "🧪",
+        ariaLabel: "Interactive Demos",
+        group: "demos",
+        parent: null,
+    },
 };
+
 
 /**
  * Get navigation items for the sidebar.

@@ -1,0 +1,3 @@
+[submodule "submodules/examples"]
+	path = submodules/examples
+	url = https://github.com/talosprotocol/talos-examples.git
