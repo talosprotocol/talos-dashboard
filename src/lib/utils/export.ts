@@ -1,53 +1,61 @@
-import { AuditEvent } from "@/lib/data/schemas";
+import { createEvidenceBundle, RedactionLevel, AuditEvent, GatewayStatus } from "@talosprotocol/contracts";
+import { AuditFilters } from "@/lib/data/DataSource";
 
-/**
- * Sanitize an event for export by converting null to undefined for optional fields.
- * This ensures the event passes Zod validation in strict mode.
- */
-function sanitizeEventForExport(event: AuditEvent): AuditEvent {
-    return {
-        ...event,
-        denial_reason: event.denial_reason || undefined,
-        metrics: event.metrics || undefined,
-        hashes: {
-            capability_hash: event.hashes.capability_hash || undefined,
-            request_hash: event.hashes.request_hash || undefined,
-            response_hash: event.hashes.response_hash || undefined,
-            event_hash: event.hashes.event_hash || undefined,
-        },
-        integrity: {
-            ...event.integrity,
-            failure_reason: event.integrity.failure_reason || undefined,
-            verified_at: event.integrity.verified_at || undefined,
-        },
-    };
+export interface ExportOptions {
+    events: AuditEvent[];
+    redactionLevel?: RedactionLevel;
+    gatewaySnapshot?: GatewayStatus;
+    filters?: AuditFilters;
+    cursorRange?: { start?: string; end?: string };
+    dashboardVersion: string;
+    onProgress?: (stage: "preparing" | "validating" | "downloading", progress: number) => void;
 }
 
-export function downloadEvidenceBundle(event: AuditEvent) {
-    // Sanitize the event to handle null vs undefined
-    const sanitizedEvent = sanitizeEventForExport(event);
+export class ExportLimitExceededError extends Error {
+    constructor(public count: number, public limit: number) {
+        super(`Export limit exceeded: ${count} events (max ${limit})`);
+        this.name = "ExportLimitExceededError";
+    }
+}
 
-    const bundle = {
-        evidence_bundle_version: "1" as const,
-        generated_at: new Date().toISOString(),
-        redaction_mode: (process.env.NEXT_PUBLIC_TALOS_ALLOW_SAFE_METADATA === "true"
-            ? "SAFE_METADATA"
-            : "STRICT_HASH_ONLY") as "STRICT_HASH_ONLY" | "SAFE_METADATA",
-        events: [sanitizedEvent],
-        integrity_summary: {
-            [event.outcome]: 1,
-        }
-    };
+export async function downloadBulkEvidenceBundle(params: ExportOptions): Promise<void> {
+    const MAX_EVENTS = 10_000;
 
-    // Download without strict validation for now
+    if (params.events.length > MAX_EVENTS) {
+        throw new ExportLimitExceededError(params.events.length, MAX_EVENTS);
+    }
+
+    params.onProgress?.("preparing", 10);
+
+    // Yield to event loop to avoid freezing UI
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    params.onProgress?.("validating", 30);
+
+    const bundle = createEvidenceBundle({
+        events: params.events,
+        redactionLevel: params.redactionLevel ?? "safe_default",
+        gatewaySnapshot: params.gatewaySnapshot,
+        filters: params.filters as any,
+        cursorRange: params.cursorRange,
+        dashboardVersion: params.dashboardVersion
+    });
+
+    params.onProgress?.("downloading", 80);
+
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-
+    
     const a = document.createElement("a");
     a.href = url;
-    a.download = `evidence_${event.event_id}.json`;
+    a.download = `evidence_bundle_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Cleanup
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        params.onProgress?.("downloading", 100);
+    }, 100);
 }

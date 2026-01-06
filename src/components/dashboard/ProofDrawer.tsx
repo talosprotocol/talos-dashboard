@@ -5,7 +5,7 @@ import { AuditEvent } from "@/lib/data/schemas";
 import { CheckCircle, Shield, Hash, Copy, AlertTriangle, Download, ShieldAlert, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { downloadEvidenceBundle } from "@/lib/utils/export";
+import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
 
 interface ProofDrawerProps {
     event: AuditEvent | null;
@@ -103,7 +103,11 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                 <GlassPanel
                     variant="hoverable"
                     className="flex items-center justify-center p-3 gap-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                    onClick={() => downloadEvidenceBundle(event)}
+                    onClick={() => downloadBulkEvidenceBundle({
+                        events: [event],
+                        redactionLevel: "safe_default",
+                        dashboardVersion: "1.0.0"
+                    })}
                 >
                     <Download className="w-4 h-4" />
                     <span className="text-sm font-medium">Export Evidence JSON</span>

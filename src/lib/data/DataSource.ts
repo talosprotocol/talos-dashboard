@@ -188,6 +188,10 @@ class MockDataSource implements DataSource {
 
 // --- Integrity & Backfill State ---
 
+// --- Integrity & Backfill State ---
+
+import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
+
 export type IntegrityStatus = "OK" | "CURSOR_MISMATCH" | "INVALID_FRAME";
 export type BackfillStatus = "IDLE" | "ACTIVE" | "COMPLETE" | "PARTIAL" | "FAILED";
 
@@ -195,9 +199,20 @@ export type BackfillStatus = "IDLE" | "ACTIVE" | "COMPLETE" | "PARTIAL" | "FAILE
 let _integrityStatus: IntegrityStatus = "OK";
 let _backfillStatus: BackfillStatus = "IDLE";
 let _backfillLoadedCount = 0;
+let _backfillRetries = 0;
+let _cursorGaps: CursorGap[] = [];
 
 export function getIntegrityStatus() { return _integrityStatus; }
 export function getBackfillStatus() { return _backfillStatus; }
+export function getCursorGaps() { return _cursorGaps; }
+export function getBackfillRetryInfo() { return { retries: _backfillRetries, max: 3 }; }
+
+export function retryBackfill() {
+    if (_backfillRetries < 3) {
+        _backfillStatus = "IDLE";
+        _backfillRetries++;
+    }
+}
 
 // --- HTTP Implementation ---
 
@@ -339,6 +354,16 @@ export class HttpDataSource implements DataSource {
                     if (page.items.length === 0) {
                         _backfillStatus = "COMPLETE"; // Genesis reached
                     } else {
+                        // Integrity Check: Verify continuity of the fetched page
+                        const continuity = checkCursorContinuity(page.items);
+                        if (continuity.status === "GAP_DETECTED") {
+                            console.warn("Gap detected in backfill", continuity.gaps);
+                            _cursorGaps.push(...continuity.gaps);
+                            continuity.gaps.forEach(g => {
+                                cb({ type: "cursor_gap", from: g.from_cursor, to: g.to_cursor });
+                            });
+                        }
+
                         page.items.forEach(e => cb({ type: "audit_event", event: e }));
                         _backfillLoadedCount += page.items.length;
 

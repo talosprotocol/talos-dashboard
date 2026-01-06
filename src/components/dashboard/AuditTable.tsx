@@ -16,16 +16,44 @@ import { ProofDrawer } from "./ProofDrawer";
 
 interface AuditTableProps {
     data: AuditEvent[];
-    total: number;
     onFetchMore: () => void;
     isLoading: boolean;
+    selectedIds?: Set<string>;
+    onSelectionChange?: (ids: Set<string>) => void;
 }
 
-export function AuditTable({ data, onFetchMore, isLoading }: AuditTableProps) {
+export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelectionChange }: AuditTableProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 
+    const toggleSelection = (id: string) => {
+        if (!onSelectionChange || !selectedIds) return;
+        const next = new Set(selectedIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        onSelectionChange(next);
+    };
+
     const columns = useMemo<ColumnDef<AuditEvent>[]>(() => [
+        {
+            id: "select",
+            header: "",
+            cell: (info) => {
+                const id = info.row.original.event_id;
+                const isSelected = selectedIds?.has(id);
+                return (
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelection(id)}
+                            className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900/50 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
+                        />
+                    </div>
+                );
+            },
+            size: 40,
+        },
         {
             accessorKey: "timestamp",
             header: "Timestamp",

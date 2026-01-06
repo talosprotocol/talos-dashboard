@@ -2,15 +2,17 @@
 
 import { useDataSource } from "@/lib/hooks/useDataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import { useMemo } from "react";
-import { ArrowLeft } from "lucide-react";
+import { SessionTimeline } from "@/components/dashboard/SessionTimeline";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { computeSuspiciousScore } from "@/lib/analysis/scoring";
+import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
 
 export default function SessionDetailPage({ params }: { params: { id: string } }) {
     const { events } = useDataSource();
     const sessionId = params.id;
+    const [isExporting, setIsExporting] = useState(false);
 
     const sessionEvents = useMemo(() => {
         // Desc order by default in mock
@@ -22,14 +24,40 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
         return scores.get(sessionId);
     }, [sessionEvents, sessionId]);
 
-    // Note: hasMore=false for this MVP detail view as we rely on the main buffer.
-    // Real implementation would fetch /sessions/:id/events stream.
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            await downloadBulkEvidenceBundle({
+                events: sessionEvents,
+                redactionLevel: "safe_default", // Default for session export
+                dashboardVersion: "1.0.0",
+                filters: { session_id: sessionId }
+            });
+        } catch (e) {
+            console.error("Session export failed", e);
+            alert("Export failed: " + e);
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <main className="min-h-screen bg-[var(--bg)] p-8 font-sans text-[var(--text-primary)]">
-            <Link href="/sessions" className="flex items-center gap-2 mb-6 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm w-fit">
-                <ArrowLeft className="w-4 h-4" /> Back to Sessions
-            </Link>
+            <div className="flex items-center justify-between mb-6">
+                <Link href="/sessions" className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm w-fit">
+                    <ArrowLeft className="w-4 h-4" /> Back to Sessions
+                </Link>
+                <div className="flex items-center gap-2">
+                     <button
+                        onClick={handleExport}
+                        disabled={isExporting}
+                        className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium bg-[var(--panel)] border border-[var(--glass-border)] text-[var(--accent)] hover:bg-[var(--accent-dim)] rounded-md transition-colors disabled:opacity-50"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{isExporting ? "Exporting..." : "Export Evidence"}</span>
+                    </button>
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Stats & Meta */}
@@ -51,15 +79,29 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span className="text-[var(--text-muted)]">Total Events</span>
-                                <span>{sessionEvents.length}</span>
+                                <span className="font-mono">{sessionEvents.length}</span>
                             </div>
-                            <div className="flex justify-between text-rose-400">
-                                <span>Replays</span>
-                                <span>{scoreData?.breakdown.replays ?? 0}</span>
-                            </div>
-                            <div className="flex justify-between text-amber-400">
-                                <span>Unknown Tools</span>
-                                <span>{scoreData?.breakdown.unknownTools ?? 0}</span>
+                            {scoreData?.breakdown.replays ? (
+                                <div className="flex justify-between text-rose-400">
+                                    <span>Replays</span>
+                                    <span className="font-mono">{scoreData.breakdown.replays}</span>
+                                </div>
+                            ) : null}
+                            {scoreData?.breakdown.unknownTools ? (
+                                <div className="flex justify-between text-amber-400">
+                                    <span>Unknown Tools</span>
+                                    <span className="font-mono">{scoreData.breakdown.unknownTools}</span>
+                                </div>
+                            ) : null}
+                             <div className="pt-2 border-t border-[var(--glass-border)] mt-2">
+                                <div className="flex justify-between text-xs text-[var(--text-muted)]">
+                                    <span>Start Time</span>
+                                    <span className="font-mono">{sessionEvents[sessionEvents.length - 1] ? new Date(sessionEvents[sessionEvents.length - 1].timestamp * 1000).toLocaleTimeString() : "-"}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1">
+                                    <span>Last Activity</span>
+                                    <span className="font-mono">{sessionEvents[0] ? new Date(sessionEvents[0].timestamp * 1000).toLocaleTimeString() : "-"}</span>
+                                </div>
                             </div>
                         </div>
                     </GlassPanel>
@@ -68,12 +110,15 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
                 {/* Right Column: Timeline */}
                 <div className="lg:col-span-2">
                     <h2 className="text-lg font-bold mb-4">Session Timeline</h2>
-                    <ActivityFeed
-                        events={sessionEvents}
-                        hasMore={false}
-                        onLoadMore={() => { }}
-                        isLoading={false}
-                    />
+                    {sessionEvents.length > 0 ? (
+                        <SessionTimeline
+                            events={sessionEvents}
+                            hasMore={false}
+                            onLoadMore={() => { }}
+                        />
+                    ) : (
+                        <div className="text-[var(--text-muted)] text-sm italic">No events found for this session.</div>
+                    )}
                 </div>
             </div>
         </main>
