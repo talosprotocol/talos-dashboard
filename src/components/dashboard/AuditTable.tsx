@@ -7,7 +7,7 @@ import {
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { useRef, useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import { AuditEvent } from "@/lib/data/schemas";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { cn } from "@/lib/cn";
@@ -20,6 +20,12 @@ interface AuditTableProps {
     readonly isLoading: boolean;
     readonly selectedIds?: Set<string>;
     readonly onSelectionChange?: (ids: Set<string>) => void;
+}
+
+interface AuditTableMeta {
+    selectedIds?: Set<string>;
+    toggleSelection?: (id: string) => void;
+    setSelectedEvent?: (event: AuditEvent | null) => void;
 }
 
 const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
@@ -104,6 +110,74 @@ const ActionCell = ({ row, setSelectedEvent }: Readonly<{ row: any; setSelectedE
     </button>
 );
 
+const columns: ColumnDef<AuditEvent>[] = [
+    {
+        id: "select",
+        header: "",
+        cell: ({ row, table }) => {
+            const meta = table.options.meta as AuditTableMeta;
+            return (
+                <SelectCell 
+                    row={row} 
+                    selectedIds={meta?.selectedIds} 
+                    toggleSelection={meta?.toggleSelection} 
+                />
+            );
+        },
+        size: 40,
+    },
+    {
+        accessorKey: "timestamp",
+        header: "Timestamp",
+        cell: (info) => <TimestampCell getValue={info.getValue} />,
+        size: 180,
+    },
+    {
+        accessorKey: "event_type",
+        header: "Type",
+        cell: (info) => <TypeCell getValue={info.getValue} />,
+        size: 140,
+    },
+    {
+        accessorKey: "outcome",
+        header: "Outcome",
+        cell: (info) => <OutcomeCell getValue={info.getValue} />,
+        size: 80,
+    },
+    {
+        accessorKey: "denial_reason",
+        header: "Reason",
+        cell: (info) => <ReasonCell getValue={info.getValue} />,
+        size: 150,
+    },
+    {
+        id: "identity",
+        header: "Identity",
+        cell: IdentityCell,
+        size: 150,
+    },
+    {
+        id: "proof",
+        header: "Proof",
+        cell: ProofCell,
+        size: 120,
+    },
+    {
+        id: "actions",
+        header: "",
+        cell: ({ row, table }) => {
+            const meta = table.options.meta as AuditTableMeta;
+            return (
+                <ActionCell 
+                    row={row} 
+                    setSelectedEvent={meta?.setSelectedEvent!} 
+                />
+            );
+        },
+        size: 50,
+    }
+];
+
 export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelectionChange }: AuditTableProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
@@ -116,62 +190,18 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
         onSelectionChange(next);
     };
 
-    const columns = useMemo<ColumnDef<AuditEvent>[]>(() => [
-        {
-            id: "select",
-            header: "",
-            cell: (info) => <SelectCell row={info.row} selectedIds={selectedIds} toggleSelection={toggleSelection} />,
-            size: 40,
-        },
-        {
-            accessorKey: "timestamp",
-            header: "Timestamp",
-            cell: (info) => <TimestampCell getValue={info.getValue} />,
-            size: 180,
-        },
-        {
-            accessorKey: "event_type",
-            header: "Type",
-            cell: (info) => <TypeCell getValue={info.getValue} />,
-            size: 140,
-        },
-        {
-            accessorKey: "outcome",
-            header: "Outcome",
-            cell: (info) => <OutcomeCell getValue={info.getValue} />,
-            size: 80,
-        },
-        {
-            accessorKey: "denial_reason",
-            header: "Reason",
-            cell: (info) => <ReasonCell getValue={info.getValue} />,
-            size: 150,
-        },
-        {
-            id: "identity",
-            header: "Identity",
-            cell: (info) => <IdentityCell row={info.row} />,
-            size: 150,
-        },
-        {
-            id: "proof",
-            header: "Proof",
-            cell: (info) => <ProofCell row={info.row} />,
-            size: 120,
-        },
-        {
-            id: "actions",
-            header: "",
-            cell: (info) => <ActionCell row={info.row} setSelectedEvent={setSelectedEvent} />,
-            size: 50,
-        }
-    ], [selectedIds]);
+
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        meta: {
+            selectedIds,
+            toggleSelection,
+            setSelectedEvent
+        } as AuditTableMeta,
     });
 
     const { rows } = table.getRowModel();
@@ -216,49 +246,51 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
                         }
                     }}
                 >
-                    <div
+                    <table
                         style={{
                             height: `${rowVirtualizer.getTotalSize()}px`,
                             width: '100%',
                             position: 'relative',
                         }}
                     >
-                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                            const row = rows[virtualRow.index];
-                            return (
-                                <div
-                                    key={row.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => setSelectedEvent(row.original)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                            setSelectedEvent(row.original);
-                                        }
-                                    }}
-                                    data-index={virtualRow.index}
-                                    ref={rowVirtualizer.measureElement}
-                                    className={cn(
-                                        "absolute top-0 left-0 w-full flex items-center px-4 h-12 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group",
-                                        virtualRow.index % 2 === 1 && "bg-white/[0.02]"
-                                    )}
-                                    style={{
-                                        transform: `translateY(${virtualRow.start}px)`,
-                                    }}
-                                >
-                                    {row.getVisibleCells().map(cell => (
-                                        <div
-                                            key={cell.id}
-                                            style={{ width: cell.column.getSize() }}
-                                            className="flex-shrink-0 overflow-hidden"
-                                        >
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </div>
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
+                        <tbody>
+                            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                const row = rows[virtualRow.index];
+                                return (
+                                    <tr
+                                        key={row.id}
+                                        aria-selected={selectedIds?.has(row.original.event_id)}
+                                        tabIndex={0}
+                                        onClick={() => setSelectedEvent(row.original)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                setSelectedEvent(row.original);
+                                            }
+                                        }}
+                                        data-index={virtualRow.index}
+                                        ref={rowVirtualizer.measureElement}
+                                        className={cn(
+                                            "absolute top-0 left-0 w-full flex items-center px-4 h-12 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group",
+                                            virtualRow.index % 2 === 1 && "bg-white/[0.02]"
+                                        )}
+                                        style={{
+                                            transform: `translateY(${virtualRow.start}px)`,
+                                        }}
+                                    >
+                                        {row.getVisibleCells().map(cell => (
+                                            <td
+                                                key={cell.id}
+                                                style={{ width: cell.column.getSize() }}
+                                                className="flex-shrink-0 overflow-hidden p-0"
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                     {isLoading && (
                         <div className="p-4 text-center text-xs text-[var(--text-muted)]">Loading more events...</div>
                     )}
