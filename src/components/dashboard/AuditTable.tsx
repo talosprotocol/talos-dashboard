@@ -15,11 +15,11 @@ import { CheckCircle2, FileJson, ShieldAlert } from "lucide-react";
 import { ProofDrawer } from "./ProofDrawer";
 
 interface AuditTableProps {
-    data: AuditEvent[];
-    onFetchMore: () => void;
-    isLoading: boolean;
-    selectedIds?: Set<string>;
-    onSelectionChange?: (ids: Set<string>) => void;
+    readonly data: AuditEvent[];
+    readonly onFetchMore: () => void;
+    readonly isLoading: boolean;
+    readonly selectedIds?: Set<string>;
+    readonly onSelectionChange?: (ids: Set<string>) => void;
 }
 
 const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
@@ -268,11 +268,10 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
             {/* Proof Drawer */}
             {selectedEvent && (
                 <>
-                    <div 
-                        role="button"
-                        tabIndex={0}
+                    <button
+                        type="button"
                         aria-label="Close drawer"
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity" 
+                        className="fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm z-40 transition-opacity cursor-default" 
                         onClick={() => setSelectedEvent(null)}
                         onKeyDown={(e) => {
                             if (e.key === 'Escape') setSelectedEvent(null);
