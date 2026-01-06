@@ -26,11 +26,12 @@ const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
     const id = row.original.event_id;
     const isSelected = selectedIds?.has(id);
     return (
-        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center">
             <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleSelection(id)}
+                onClick={(e) => e.stopPropagation()}
                 className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900/50 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
             />
         </div>
@@ -64,7 +65,36 @@ const ProofCell = ({ row }: any) => {
     );
 };
 
-const ActionCell = ({ row, setSelectedEvent }: any) => (
+const TimestampCell = ({ getValue }: any) => (
+    <span className="font-mono text-xs text-[var(--text-secondary)]">
+        {new Date(getValue() * 1000).toISOString()}
+    </span>
+);
+
+const TypeCell = ({ getValue }: any) => (
+    <span className="px-1.5 py-0.5 rounded bg-[var(--glass-border)] text-[var(--text-secondary)] text-[10px] uppercase font-mono tracking-wider">
+        {getValue()}
+    </span>
+);
+
+const OutcomeCell = ({ getValue }: any) => {
+    const val = getValue();
+    const colors = {
+        OK: "text-emerald-500",
+        DENY: "text-amber-500",
+        ERROR: "text-red-500"
+    };
+    // @ts-ignore - colors index safety
+    return <span className={cn("font-bold text-xs", colors[val])}>{val}</span>;
+};
+
+const ReasonCell = ({ getValue }: any) => {
+    const val = getValue();
+    if (!val) return <span className="text-[var(--text-muted)]">-</span>;
+    return <span className="text-amber-500/80 text-[10px] font-mono">{val}</span>;
+};
+
+const ActionCell = ({ row, setSelectedEvent }: Readonly<{ row: any; setSelectedEvent: (e: any) => void }>) => (
     <button
         onClick={(e) => { e.stopPropagation(); setSelectedEvent(row.original); }}
         className="p-1 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
@@ -93,49 +123,28 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
             cell: (info) => <SelectCell row={info.row} selectedIds={selectedIds} toggleSelection={toggleSelection} />,
             size: 40,
         },
-        // ... (Timestamp, Type, Outcome, Reason are simple inline returns, keeping them for brevity unless complex)
         {
             accessorKey: "timestamp",
             header: "Timestamp",
-            cell: (info) => (
-                <span className="font-mono text-xs text-[var(--text-secondary)]">
-                    {new Date(info.getValue<number>() * 1000).toISOString()}
-                </span>
-            ),
+            cell: (info) => <TimestampCell getValue={info.getValue} />,
             size: 180,
         },
         {
             accessorKey: "event_type",
             header: "Type",
-            cell: (info) => (
-                <span className="px-1.5 py-0.5 rounded bg-[var(--glass-border)] text-[var(--text-secondary)] text-[10px] uppercase font-mono tracking-wider">
-                    {info.getValue<string>()}
-                </span>
-            ),
+            cell: (info) => <TypeCell getValue={info.getValue} />,
             size: 140,
         },
         {
             accessorKey: "outcome",
             header: "Outcome",
-            cell: (info) => {
-                const val = info.getValue<string>();
-                const colors = {
-                    OK: "text-emerald-500",
-                    DENY: "text-amber-500",
-                    ERROR: "text-red-500"
-                };
-                return <span className={cn("font-bold text-xs", colors[val as keyof typeof colors])}>{val}</span>;
-            },
+            cell: (info) => <OutcomeCell getValue={info.getValue} />,
             size: 80,
         },
         {
             accessorKey: "denial_reason",
             header: "Reason",
-            cell: (info) => {
-                const val = info.getValue<string>();
-                if (!val) return <span className="text-[var(--text-muted)]">-</span>;
-                return <span className="text-amber-500/80 text-[10px] font-mono">{val}</span>;
-            },
+            cell: (info) => <ReasonCell getValue={info.getValue} />,
             size: 150,
         },
         {
@@ -219,7 +228,14 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
                             return (
                                 <div
                                     key={row.id}
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => setSelectedEvent(row.original)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            setSelectedEvent(row.original);
+                                        }
+                                    }}
                                     data-index={virtualRow.index}
                                     ref={rowVirtualizer.measureElement}
                                     className={cn(
@@ -252,7 +268,16 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
             {/* Proof Drawer */}
             {selectedEvent && (
                 <>
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity" onClick={() => setSelectedEvent(null)} />
+                    <div 
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Close drawer"
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity" 
+                        onClick={() => setSelectedEvent(null)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') setSelectedEvent(null);
+                        }}
+                    />
                     <ProofDrawer event={selectedEvent} onClose={() => setSelectedEvent(null)} />
                 </>
             )}
