@@ -22,6 +22,58 @@ interface AuditTableProps {
     onSelectionChange?: (ids: Set<string>) => void;
 }
 
+const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
+    const id = row.original.event_id;
+    const isSelected = selectedIds?.has(id);
+    return (
+        <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleSelection(id)}
+                className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900/50 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
+            />
+        </div>
+    );
+};
+
+const IdentityCell = ({ row }: any) => {
+    const { agent_id, peer_id } = row.original;
+    return (
+        <div className="flex flex-col text-xs font-mono">
+            <span className="text-[var(--text-primary)]" title={agent_id}>A: {agent_id ? agent_id.slice(0, 8) : "?"}</span>
+            <span className="text-[var(--text-muted)]" title={peer_id}>P: {peer_id ? peer_id.slice(0, 8) : "?"}</span>
+        </div>
+    );
+};
+
+const ProofCell = ({ row }: any) => {
+    const integrity = row.original.integrity;
+    const valid = integrity.proof_state === "VERIFIED";
+    return (
+         <div className="flex items-center gap-1.5">
+            {valid ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/50" />
+            ) : (
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-500/50" />
+            )}
+            <span className={cn("text-[10px]", valid ? "text-[var(--text-muted)]" : "text-amber-500")}>
+                {integrity.proof_state}
+            </span>
+        </div>
+    );
+};
+
+const ActionCell = ({ row, setSelectedEvent }: any) => (
+    <button
+        onClick={(e) => { e.stopPropagation(); setSelectedEvent(row.original); }}
+        className="p-1 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+        title="View Proof & Evidence"
+    >
+        <FileJson className="w-4 h-4" />
+    </button>
+);
+
 export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelectionChange }: AuditTableProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
@@ -38,22 +90,10 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
         {
             id: "select",
             header: "",
-            cell: (info) => {
-                const id = info.row.original.event_id;
-                const isSelected = selectedIds?.has(id);
-                return (
-                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelection(id)}
-                            className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900/50 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
-                        />
-                    </div>
-                );
-            },
+            cell: (info) => <SelectCell row={info.row} selectedIds={selectedIds} toggleSelection={toggleSelection} />,
             size: 40,
         },
+        // ... (Timestamp, Type, Outcome, Reason are simple inline returns, keeping them for brevity unless complex)
         {
             accessorKey: "timestamp",
             header: "Timestamp",
@@ -101,53 +141,22 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
         {
             id: "identity",
             header: "Identity",
-            cell: (info) => {
-                const { agent_id, peer_id } = info.row.original;
-                return (
-                    <div className="flex flex-col text-xs font-mono">
-                        <span className="text-[var(--text-primary)]" title={agent_id}>A: {agent_id ? agent_id.slice(0, 8) : "?"}</span>
-                        <span className="text-[var(--text-muted)]" title={peer_id}>P: {peer_id ? peer_id.slice(0, 8) : "?"}</span>
-                    </div>
-                )
-            },
+            cell: (info) => <IdentityCell row={info.row} />,
             size: 150,
         },
         {
             id: "proof",
             header: "Proof",
-            cell: (info) => {
-                const integrity = info.row.original.integrity;
-                const valid = integrity.proof_state === "VERIFIED";
-                return (
-                    <div className="flex items-center gap-1.5">
-                        {valid ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/50" />
-                        ) : (
-                            <ShieldAlert className="w-3.5 h-3.5 text-amber-500/50" />
-                        )}
-                        <span className={cn("text-[10px]", valid ? "text-[var(--text-muted)]" : "text-amber-500")}>
-                            {integrity.proof_state}
-                        </span>
-                    </div>
-                )
-            },
+            cell: (info) => <ProofCell row={info.row} />,
             size: 120,
         },
         {
             id: "actions",
             header: "",
-            cell: (info) => (
-                <button
-                    onClick={(e) => { e.stopPropagation(); setSelectedEvent(info.row.original); }}
-                    className="p-1 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                    title="View Proof & Evidence"
-                >
-                    <FileJson className="w-4 h-4" />
-                </button>
-            ),
+            cell: (info) => <ActionCell row={info.row} setSelectedEvent={setSelectedEvent} />,
             size: 50,
         }
-    ], []);
+    ], [selectedIds]);
 
     // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
