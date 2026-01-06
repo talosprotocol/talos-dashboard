@@ -10,6 +10,11 @@ cd "$REPO_DIR"
 [ -f "$PID_FILE" ] && { kill "$(cat "$PID_FILE")" 2>/dev/null || true; rm -f "$PID_FILE"; }
 pkill -f "next dev" 2>/dev/null || true
 rm -f "/tmp/${SERVICE_NAME}.log"
-rm -rf node_modules .next out dist build coverage .eslintcache .turbo
+# Node.js artifacts
+rm -rf node_modules .next out dist build .eslintcache .turbo
+rm -rf .tsbuildinfo *.tsbuildinfo
+# Coverage & reports
+rm -rf coverage 2>/dev/null || true
+rm -f lcov.info coverage.xml junit.xml 2>/dev/null || true
 
 echo "✓ $SERVICE_NAME cleaned"
