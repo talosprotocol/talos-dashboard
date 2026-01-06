@@ -40,7 +40,7 @@ export interface DataSource {
         filters?: AuditFilters
     }): Promise<CursorPage<AuditEvent>>;
     getGatewayStatus(): Promise<GatewayStatus>;
-    subscribe(cb: (msg: StreamMessage) => void): () => void;
+    subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void;
     exportEvidence?(params: { cursor_range?: { start?: string; end?: string }, filters?: AuditFilters }): Promise<EvidenceBundle>;
 }
 
@@ -87,7 +87,7 @@ export function olderOrEqual(a: CursorKey, b: CursorKey): boolean {
 // --- Mock Implementation ---
 
 class MockDataSource implements DataSource {
-    private events = [...MOCK_EVENTS].sort((a, b) => b.timestamp - a.timestamp); // DESC
+    private readonly events = [...MOCK_EVENTS].sort((a, b) => b.timestamp - a.timestamp); // DESC
 
     async getGatewayStatus(): Promise<GatewayStatus> {
         return MOCK_GATEWAY_STATUS;
@@ -158,7 +158,7 @@ class MockDataSource implements DataSource {
         }
 
         const items = subset.slice(0, limit);
-        const lastItem = items[items.length - 1];
+        const lastItem = items.at(-1);
 
         return {
             items,
@@ -167,10 +167,18 @@ class MockDataSource implements DataSource {
         };
     }
 
-    subscribe(cb: (msg: StreamMessage) => void): () => void {
+    subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
         // Mock live stream: emit a random event every 5 seconds
         const interval = setInterval(() => {
             const randomEvent = this.events[Math.floor(Math.random() * this.events.length)];
+
+            // Apply Filters
+            if (filters) {
+                if (filters.session_id && randomEvent.session_id !== filters.session_id) return;
+                if (filters.outcome && randomEvent.outcome !== filters.outcome) return;
+                if (filters.correlation_id && randomEvent.correlation_id !== filters.correlation_id) return;
+            }
+
             // Clone and bump timestamp to make it "new"
             const newEvent: AuditEvent = {
                 ...randomEvent,
@@ -200,7 +208,7 @@ let _integrityStatus: IntegrityStatus = "OK";
 let _backfillStatus: BackfillStatus = "IDLE";
 let _backfillLoadedCount = 0;
 let _backfillRetries = 0;
-let _cursorGaps: CursorGap[] = [];
+const _cursorGaps: CursorGap[] = [];
 
 export function getIntegrityStatus() { return _integrityStatus; }
 export function getBackfillStatus() { return _backfillStatus; }
@@ -221,7 +229,7 @@ const BACKFILL_MAX_EVENTS = 1000;
 const BACKFILL_PAGE_SIZE = 100;
 
 export class HttpDataSource implements DataSource {
-    private baseUrl = "http://localhost:8000";
+    private readonly baseUrl = "http://localhost:8000";
 
     async getGatewayStatus(): Promise<GatewayStatus> {
         const res = await fetch(`${this.baseUrl}/api/gateway/status`);
@@ -288,7 +296,7 @@ export class HttpDataSource implements DataSource {
         return data;
     }
 
-    private ingestEvent(event: AuditEvent) {
+    protected ingestEvent(event: AuditEvent) {
         const validation = validateCursor(event);
         if (!validation.ok) {
             console.error("Integrity Failure:", {
@@ -319,81 +327,85 @@ export class HttpDataSource implements DataSource {
         }
     }
 
-    subscribe(cb: (msg: StreamMessage) => void): () => void {
-        // Polling loop (v1: HttpDataSource)
-        // Includes Automatic Backfill Logic
-        let oldestLoadedCursor: string | undefined = undefined;
+    subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
+        const state = {
+            oldestLoadedCursor: undefined as string | undefined
+        };
 
         const interval = setInterval(async () => {
             try {
-                // 1. Poll Status
-                const status = await this.getGatewayStatus();
-                cb({ type: "gateway_status", status });
-
-                // 2. Poll Recent Events (Live update)
-                const recent = await this.listAuditEvents({ limit: 10 });
-                if (recent.items.length > 0) {
-                    recent.items.forEach(e => cb({ type: "audit_event", event: e }));
-
-                    // Helper: Track oldest cursor seen this session for backfill anchor
-                    if (!oldestLoadedCursor && recent.items.length > 0) {
-                        oldestLoadedCursor = recent.items[recent.items.length - 1].cursor;
-                    }
-                }
-
-                // 3. Backfill Loop (v3.2 Spec: "Gap in history detection")
-                if (_backfillStatus === "IDLE" && oldestLoadedCursor && _backfillLoadedCount < BACKFILL_MAX_EVENTS) {
-                    _backfillStatus = "ACTIVE";
-
-                    console.log(`Backfilling from cursor: ${oldestLoadedCursor}`);
-                    const page = await this.listAuditEvents({
-                        limit: BACKFILL_PAGE_SIZE,
-                        cursor: oldestLoadedCursor // passed as 'before' param
-                    });
-
-                    if (page.items.length === 0) {
-                        _backfillStatus = "COMPLETE"; // Genesis reached
-                    } else {
-                        // Integrity Check: Verify continuity of the fetched page
-                        const continuity = checkCursorContinuity(page.items);
-                        if (continuity.status === "GAP_DETECTED") {
-                            console.warn("Gap detected in backfill", continuity.gaps);
-                            _cursorGaps.push(...continuity.gaps);
-                            continuity.gaps.forEach(g => {
-                                cb({ type: "cursor_gap", from: g.from_cursor, to: g.to_cursor });
-                            });
-                        }
-
-                        page.items.forEach(e => cb({ type: "audit_event", event: e }));
-                        _backfillLoadedCount += page.items.length;
-
-                        const newOldest = page.items[page.items.length - 1].cursor;
-
-                        if (newOldest === oldestLoadedCursor || !page.next_cursor) {
-                            // Loop trigger protection or end of stream
-                            // If no next_cursor, we are done
-                            if (!page.next_cursor) {
-                                _backfillStatus = "COMPLETE";
-                            } else {
-                                _backfillStatus = "FAILED";
-                                console.warn("Backfill stuck: cursor did not verify progress.");
-                            }
-                        } else {
-                            oldestLoadedCursor = newOldest;
-                            if (_backfillLoadedCount >= BACKFILL_MAX_EVENTS) {
-                                _backfillStatus = "PARTIAL"; // Safety cap hit
-                            } else {
-                                _backfillStatus = "IDLE"; // Continue next tick
-                            }
-                        }
-                    }
-                }
-
+                await this.pollStatus(cb);
+                state.oldestLoadedCursor = await this.pollRecentEvents(cb, state.oldestLoadedCursor, filters);
+                state.oldestLoadedCursor = await this.handleBackfill(cb, state.oldestLoadedCursor, filters);
             } catch (e) {
                 console.error("Polling error", e);
             }
         }, 2000);
+
         return () => clearInterval(interval);
+    }
+
+    private async pollStatus(cb: (msg: StreamMessage) => void) {
+        const status = await this.getGatewayStatus();
+        cb({ type: "gateway_status", status });
+    }
+
+    private async pollRecentEvents(cb: (msg: StreamMessage) => void, oldest: string | undefined, filters?: AuditFilters): Promise<string | undefined> {
+        const recent = await this.listAuditEvents({ limit: 10, filters });
+        if (recent.items.length === 0) return oldest;
+
+        recent.items.forEach(e => cb({ type: "audit_event", event: e }));
+        return oldest || recent.items.at(-1)?.cursor;
+    }
+
+    private async handleBackfill(cb: (msg: StreamMessage) => void, oldest: string | undefined, filters?: AuditFilters): Promise<string | undefined> {
+        if (_backfillStatus !== "IDLE" || !oldest || _backfillLoadedCount >= BACKFILL_MAX_EVENTS) {
+            return oldest;
+        }
+
+        _backfillStatus = "ACTIVE";
+        console.log(`Backfilling from cursor: ${oldest}`);
+
+        const page = await this.listAuditEvents({
+            limit: BACKFILL_PAGE_SIZE,
+            cursor: oldest,
+            filters
+        });
+
+        if (page.items.length === 0) {
+            _backfillStatus = "COMPLETE";
+            return oldest;
+        }
+
+        this.processBackfillPage(cb, page.items);
+        _backfillLoadedCount += page.items.length;
+
+        const newOldest = page.items.at(-1)?.cursor;
+        if (newOldest === oldest || !page.next_cursor) {
+            const hasNext = !!page.next_cursor;
+            if (hasNext) {
+                _backfillStatus = "FAILED";
+                console.warn("Backfill stuck: cursor did not verify progress.");
+            } else {
+                _backfillStatus = "COMPLETE";
+            }
+        } else {
+            _backfillStatus = _backfillLoadedCount >= BACKFILL_MAX_EVENTS ? "PARTIAL" : "IDLE";
+        }
+
+        return newOldest || oldest;
+    }
+
+    private processBackfillPage(cb: (msg: StreamMessage) => void, items: AuditEvent[]) {
+        const continuity = checkCursorContinuity(items);
+        if (continuity.status === "GAP_DETECTED") {
+            console.warn("Gap detected in backfill", continuity.gaps);
+            _cursorGaps.push(...continuity.gaps);
+            continuity.gaps.forEach(g => {
+                cb({ type: "cursor_gap", from: g.from_cursor, to: g.to_cursor });
+            });
+        }
+        items.forEach(e => cb({ type: "audit_event", event: e }));
     }
 }
 
@@ -423,8 +435,8 @@ export class SqliteDataSource implements DataSource {
         return new MockDataSource().listAuditEvents(params); // Fallback
     }
 
-    subscribe(cb: (msg: StreamMessage) => void): () => void {
-        return new MockDataSource().subscribe(cb);
+    subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
+        return new MockDataSource().subscribe(cb, filters);
     }
 }
 
@@ -432,10 +444,19 @@ export class SqliteDataSource implements DataSource {
 
 const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "MOCK") as DataMode;
 
-export const dataSource: DataSource =
-    (mode === "HTTP" || mode === "LIVE") ? new HttpDataSource() :
-        (mode === "SQLITE") ? new SqliteDataSource() :
-            new MockDataSource();
+import { WsDataSource } from "./WsDataSource";
+
+function createDataSource(mode: DataMode): DataSource {
+    switch (mode) {
+        case "WS": return new WsDataSource();
+        case "HTTP":
+        case "LIVE": return new HttpDataSource();
+        case "SQLITE": return new SqliteDataSource();
+        default: return new MockDataSource();
+    }
+}
+
+export const dataSource: DataSource = createDataSource(mode);
 
 if (mode === "SQLITE" && process.env.NODE_ENV !== "development") {
     console.error("CRITICAL: Attempted to load SQLite adapter in non-dev environment. Falling back to Mock.");

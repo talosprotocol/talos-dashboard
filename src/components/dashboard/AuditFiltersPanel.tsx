@@ -8,8 +8,8 @@ interface AuditFiltersPanelProps {
     onClose: () => void;
 }
 
-export function AuditFiltersPanel({ filters, onChange, onClose }: AuditFiltersPanelProps) {
-    const handleChange = (key: keyof AuditFilters, value: any) => {
+export function AuditFiltersPanel({ filters, onChange, onClose }: Readonly<AuditFiltersPanelProps>) {
+    const handleChange = <K extends keyof AuditFilters>(key: K, value: AuditFilters[K]) => {
         const newFilters = { ...filters, [key]: value };
         if (!value) delete newFilters[key]; // Clear empty keys
         onChange(newFilters);
@@ -26,10 +26,11 @@ export function AuditFiltersPanel({ filters, onChange, onClose }: AuditFiltersPa
 
             {/* Session ID */}
             <div className="space-y-1">
-                <label className="text-xs text-[var(--text-muted)] font-medium">Session ID</label>
+                <label htmlFor="filters-session-id" className="text-xs text-[var(--text-muted)] font-medium">Session ID</label>
                 <div className="relative">
                     <Search className="absolute left-2 top-2 w-3.5 h-3.5 text-[var(--text-muted)]" />
                     <input
+                        id="filters-session-id"
                         type="text"
                         placeholder="Search session..."
                         className="w-full bg-[var(--bg)] border border-[var(--glass-border)] rounded px-2 py-1.5 pl-7 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
@@ -41,8 +42,9 @@ export function AuditFiltersPanel({ filters, onChange, onClose }: AuditFiltersPa
 
             {/* Correlation ID */}
             <div className="space-y-1">
-                <label className="text-xs text-[var(--text-muted)] font-medium">Correlation ID</label>
+                <label htmlFor="filters-correlation-id" className="text-xs text-[var(--text-muted)] font-medium">Correlation ID</label>
                 <input
+                    id="filters-correlation-id"
                     type="text"
                     placeholder="Search correlation..."
                     className="w-full bg-[var(--bg)] border border-[var(--glass-border)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
@@ -53,11 +55,12 @@ export function AuditFiltersPanel({ filters, onChange, onClose }: AuditFiltersPa
 
             {/* Outcome */}
             <div className="space-y-1">
-                <label className="text-xs text-[var(--text-muted)] font-medium">Outcome</label>
+                <label htmlFor="filters-outcome" className="text-xs text-[var(--text-muted)] font-medium">Outcome</label>
                 <select
+                    id="filters-outcome"
                     className="w-full bg-[var(--bg)] border border-[var(--glass-border)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                     value={filters.outcome || ""}
-                    onChange={(e) => handleChange("outcome", e.target.value as any)}
+                    onChange={(e) => handleChange("outcome", e.target.value as AuditFilters["outcome"])}
                 >
                     <option value="">All Outcomes</option>
                     <option value="OK">Allowed (OK)</option>
@@ -69,8 +72,9 @@ export function AuditFiltersPanel({ filters, onChange, onClose }: AuditFiltersPa
             {/* Denial Reason (Conditional) */}
             {filters.outcome === "DENY" && (
                 <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                    <label className="text-xs text-[var(--text-muted)] font-medium">Denial Reason</label>
+                    <label htmlFor="filters-denial-reason" className="text-xs text-[var(--text-muted)] font-medium">Denial Reason</label>
                     <select
+                        id="filters-denial-reason"
                         className="w-full bg-[var(--bg)] border border-[var(--glass-border)] rounded px-2 py-1.5 text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
                         value={filters.denial_reason || ""}
                         onChange={(e) => handleChange("denial_reason", e.target.value)}

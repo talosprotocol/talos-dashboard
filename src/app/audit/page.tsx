@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { AuditTable } from "@/components/dashboard/AuditTable";
-import { dataSource, AuditFilters } from "@/lib/data/DataSource";
+import { dataSource, AuditFilters, StreamMessage } from "@/lib/data/DataSource";
 import { AuditEvent } from "@/lib/data/schemas";
 import { ListFilter } from "lucide-react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -36,7 +36,10 @@ export default function AuditPage() {
         const newFilters: AuditFilters = {};
         if (searchParams.get("session_id")) newFilters.session_id = searchParams.get("session_id")!;
         if (searchParams.get("correlation_id")) newFilters.correlation_id = searchParams.get("correlation_id")!;
-        if (searchParams.get("outcome")) newFilters.outcome = searchParams.get("outcome") as any;
+        const outcome = searchParams.get("outcome");
+        if (outcome === "OK" || outcome === "DENY" || outcome === "ERROR") {
+            newFilters.outcome = outcome;
+        }
         if (searchParams.get("denial_reason")) newFilters.denial_reason = searchParams.get("denial_reason")!;
         
         // Only set if different to avoid loops
@@ -102,10 +105,21 @@ export default function AuditPage() {
     // We listen to filters changing. To avoid double fetching on mount (URL parse -> filter set -> fetch),
     // we can debounce or just let it happen.
     // However, the Reset effect above clears data. We need to fetch AFTER clear.
+    // Initial Load & Filter Change Load
+    // Initial Load & Filter Change Load
+    const handleLiveEvent = useCallback((msg: StreamMessage) => {
+        if (msg.type !== "audit_event") return;
+        setData(prev => {
+            const isDuplicate = prev.some(e => e.event_id === msg.event.event_id);
+            return isDuplicate ? prev : [msg.event, ...prev];
+        });
+    }, []);
+
     useEffect(() => {
         fetchMore(true);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters]); 
+        const unsubscribe = dataSource.subscribe(handleLiveEvent, filters);
+        return () => unsubscribe();
+    }, [filters, fetchMore, handleLiveEvent]); 
 
     // Handle Export
     const handleExport = async ({ redactionLevel }: { redactionLevel: RedactionLevel }) => {

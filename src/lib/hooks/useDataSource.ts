@@ -13,6 +13,25 @@ export function useDataSource() {
     const [cursor, setCursor] = useState<string | undefined>(undefined);
     const [hasMore, setHasMore] = useState(true);
 
+    const handleMessage = useCallback((msg: StreamMessage) => {
+        if (msg.type === "audit_event") {
+            setEvents(prev => {
+                const isDuplicate = prev.some(e => e.event_id === msg.event.event_id);
+                return isDuplicate ? prev : [msg.event, ...prev];
+            });
+            // Update stats logic (simplified)
+            setStats(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    requests_24h: prev.requests_24h + 1,
+                };
+            });
+        } else if (msg.type === "gateway_status") {
+            setGatewayStatus(msg.status);
+        }
+    }, []);
+
     // Initial Load
     useEffect(() => {
         async function init() {
@@ -38,29 +57,10 @@ export function useDataSource() {
         init();
 
         // Subscribe to Live Stream
-        const unsubscribe = dataSource.subscribe((msg: StreamMessage) => {
-            if (msg.type === "audit_event") {
-                setEvents(prev => {
-                    // Dedupe global by event_id
-                    if (prev.some(e => e.event_id === msg.event.event_id)) return prev;
-                    return [msg.event, ...prev];
-                });
-                // Update stats logic (simplified)
-                setStats(prev => {
-                    if (!prev) return null;
-                    return {
-                        ...prev,
-                        requests_24h: prev.requests_24h + 1,
-                        // Note: Ideally we re-fetch stats occasionally
-                    }
-                })
-            } else if (msg.type === "gateway_status") {
-                setGatewayStatus(msg.status);
-            }
-        });
+        const unsubscribe = dataSource.subscribe(handleMessage);
 
         return () => unsubscribe();
-    }, []);
+    }, [handleMessage]);
 
     const loadMore = useCallback(async () => {
         if (!cursor || loadingMore) return;

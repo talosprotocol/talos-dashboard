@@ -36,7 +36,7 @@ export async function downloadBulkEvidenceBundle(params: ExportOptions): Promise
         events: params.events,
         redactionLevel: params.redactionLevel ?? "safe_default",
         gatewaySnapshot: params.gatewaySnapshot,
-        filters: params.filters as any,
+        filters: params.filters as Record<string, string> | undefined,
         cursorRange: params.cursorRange,
         dashboardVersion: params.dashboardVersion
     });
@@ -48,13 +48,13 @@ export async function downloadBulkEvidenceBundle(params: ExportOptions): Promise
     
     const a = document.createElement("a");
     a.href = url;
-    a.download = `evidence_bundle_${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    a.download = `evidence_bundle_${new Date().toISOString().replaceAll(/[:.]/g, "-")}.json`;
     document.body.appendChild(a);
     a.click();
     
     // Cleanup
     setTimeout(() => {
-        document.body.removeChild(a);
+        a.remove();
         URL.revokeObjectURL(url);
         params.onProgress?.("downloading", 100);
     }, 100);

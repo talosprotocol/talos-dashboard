@@ -1,12 +1,14 @@
 "use client";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
+    CellContext,
     ColumnDef,
     flexRender,
     getCoreRowModel,
+    Row,
     useReactTable,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState } from "react";
 import { AuditEvent } from "@/lib/data/schemas";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -28,7 +30,16 @@ interface AuditTableMeta {
     setSelectedEvent?: (event: AuditEvent | null) => void;
 }
 
-const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
+
+const SelectCell = ({ 
+    row, 
+    selectedIds, 
+    toggleSelection 
+}: { 
+    row: Row<AuditEvent>; 
+    selectedIds?: Set<string>; 
+    toggleSelection?: (id: string) => void; 
+}) => {
     const id = row.original.event_id;
     const isSelected = selectedIds?.has(id);
     return (
@@ -36,7 +47,7 @@ const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
             <input
                 type="checkbox"
                 checked={isSelected}
-                onChange={() => toggleSelection(id)}
+                onChange={() => toggleSelection?.(id)}
                 onClick={(e) => e.stopPropagation()}
                 className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-900/50 text-emerald-500 focus:ring-emerald-500/20 cursor-pointer"
             />
@@ -44,7 +55,7 @@ const SelectCell = ({ row, selectedIds, toggleSelection }: any) => {
     );
 };
 
-const IdentityCell = ({ row }: any) => {
+const IdentityCell = ({ row }: { row: Row<AuditEvent> }) => {
     const { agent_id, peer_id } = row.original;
     return (
         <div className="flex flex-col text-xs font-mono">
@@ -54,8 +65,9 @@ const IdentityCell = ({ row }: any) => {
     );
 };
 
-const ProofCell = ({ row }: any) => {
+const ProofCell = ({ row }: { row: Row<AuditEvent> }) => {
     const integrity = row.original.integrity;
+    if (!integrity) return null;
     const valid = integrity.proof_state === "VERIFIED";
     return (
          <div className="flex items-center gap-1.5">
@@ -71,38 +83,38 @@ const ProofCell = ({ row }: any) => {
     );
 };
 
-const TimestampCell = ({ getValue }: any) => (
+const TimestampCell = ({ getValue }: CellContext<AuditEvent, unknown>) => (
     <span className="font-mono text-xs text-[var(--text-secondary)]">
-        {new Date(getValue() * 1000).toISOString()}
+        {new Date((getValue() as number) * 1000).toISOString()}
     </span>
 );
 
-const TypeCell = ({ getValue }: any) => (
+const TypeCell = ({ getValue }: CellContext<AuditEvent, unknown>) => (
     <span className="px-1.5 py-0.5 rounded bg-[var(--glass-border)] text-[var(--text-secondary)] text-[10px] uppercase font-mono tracking-wider">
-        {getValue()}
+        {getValue() as string}
     </span>
 );
 
-const OutcomeCell = ({ getValue }: any) => {
-    const val = getValue();
-    const colors = {
+const OutcomeCell = ({ getValue }: CellContext<AuditEvent, unknown>) => {
+    const val = getValue() as string;
+    const colors: Record<string, string> = {
         OK: "text-emerald-500",
         DENY: "text-amber-500",
         ERROR: "text-red-500"
     };
-    // @ts-ignore - colors index safety
     return <span className={cn("font-bold text-xs", colors[val])}>{val}</span>;
 };
 
-const ReasonCell = ({ getValue }: any) => {
-    const val = getValue();
+const ReasonCell = ({ getValue }: CellContext<AuditEvent, unknown>) => {
+    const val = getValue() as string | undefined;
     if (!val) return <span className="text-[var(--text-muted)]">-</span>;
     return <span className="text-amber-500/80 text-[10px] font-mono">{val}</span>;
 };
 
-const ActionCell = ({ row, setSelectedEvent }: Readonly<{ row: any; setSelectedEvent: (e: any) => void }>) => (
+const ActionCell = ({ row, setSelectedEvent }: { row: Row<AuditEvent>; setSelectedEvent?: (e: AuditEvent | null) => void }) => (
     <button
-        onClick={(e) => { e.stopPropagation(); setSelectedEvent(row.original); }}
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setSelectedEvent?.(row.original); }}
         className="p-1 hover:bg-white/10 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
         title="View Proof & Evidence"
     >
@@ -129,25 +141,25 @@ const columns: ColumnDef<AuditEvent>[] = [
     {
         accessorKey: "timestamp",
         header: "Timestamp",
-        cell: (info) => <TimestampCell getValue={info.getValue} />,
+        cell: (info) => <TimestampCell {...(info as CellContext<AuditEvent, unknown>)} />,
         size: 180,
     },
     {
         accessorKey: "event_type",
         header: "Type",
-        cell: (info) => <TypeCell getValue={info.getValue} />,
+        cell: (info) => <TypeCell {...(info as CellContext<AuditEvent, unknown>)} />,
         size: 140,
     },
     {
         accessorKey: "outcome",
         header: "Outcome",
-        cell: (info) => <OutcomeCell getValue={info.getValue} />,
+        cell: (info) => <OutcomeCell {...(info as CellContext<AuditEvent, unknown>)} />,
         size: 80,
     },
     {
         accessorKey: "denial_reason",
         header: "Reason",
-        cell: (info) => <ReasonCell getValue={info.getValue} />,
+        cell: (info) => <ReasonCell {...(info as CellContext<AuditEvent, unknown>)} />,
         size: 150,
     },
     {
@@ -170,7 +182,7 @@ const columns: ColumnDef<AuditEvent>[] = [
             return (
                 <ActionCell 
                     row={row} 
-                    setSelectedEvent={meta?.setSelectedEvent!} 
+                    setSelectedEvent={meta?.setSelectedEvent} 
                 />
             );
         },

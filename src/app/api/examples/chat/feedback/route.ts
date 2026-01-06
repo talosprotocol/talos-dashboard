@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     try {
       bodyJson = JSON.parse(bodyText);
       FeedbackRequestSchema.parse(bodyJson);
-    } catch (e) {
+    } catch (error_) {
+      console.warn("Schema validation failed for feedback", error_);
       return NextResponse.json(
         {
           code: "TALOS_INVALID_INPUT",
