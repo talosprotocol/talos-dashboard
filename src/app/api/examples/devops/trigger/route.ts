@@ -45,11 +45,11 @@ export async function POST(req: Request) {
       const bodyText = await req.text();
       bodyJson = JSON.parse(bodyText);
       TriggerRequestSchema.parse(bodyJson);
-    } catch (e) {
+    } catch (_e) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_INPUT",
-          details: { reason: "schema_validation_failed", error: e },
+          details: { reason: "schema_validation_failed" },
         },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       if (res.ok) {
         TriggerResponseSchema.parse(data);
       }
-    } catch (e) {
+    } catch (_e) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_UPSTREAM_RESPONSE",

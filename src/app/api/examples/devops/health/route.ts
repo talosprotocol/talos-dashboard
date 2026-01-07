@@ -12,7 +12,7 @@ const AIOPS_URL = process.env.TALOS_AIOPS_URL ?? "http://localhost:8200";
  * GET /api/examples/devops/health
  * Proxy to {AIOPS_URL}/health
  */
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

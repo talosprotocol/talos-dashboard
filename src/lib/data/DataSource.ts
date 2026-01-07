@@ -444,11 +444,14 @@ export class SqliteDataSource implements DataSource {
 
 const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "MOCK") as DataMode;
 
-import { WsDataSource } from "./WsDataSource";
-
 function createDataSource(mode: DataMode): DataSource {
     switch (mode) {
-        case "WS": return new WsDataSource();
+        case "WS": {
+            // Lazy import to avoid circular dependency
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const { WsDataSource } = require("./WsDataSource");
+            return new WsDataSource();
+        }
         case "HTTP":
         case "LIVE": return new HttpDataSource();
         case "SQLITE": return new SqliteDataSource();

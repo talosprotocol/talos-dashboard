@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import { AuditTable } from "@/components/dashboard/AuditTable";
 import { dataSource, AuditFilters, StreamMessage } from "@/lib/data/DataSource";
 import { AuditEvent } from "@/lib/data/schemas";
@@ -12,7 +12,7 @@ import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
 import { RedactionLevel } from "@talosprotocol/contracts";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function AuditPage() {
+function AuditPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
@@ -204,5 +204,18 @@ export default function AuditPage() {
                 onExport={handleExport}
             />
         </main>
+    );
+}
+
+// Next.js 16 requires useSearchParams to be wrapped in Suspense for static generation
+export default function AuditPage() {
+    return (
+        <Suspense fallback={
+            <main className="h-screen bg-[var(--bg)] flex items-center justify-center text-[var(--text-secondary)]">
+                Loading...
+            </main>
+        }>
+            <AuditPageContent />
+        </Suspense>
     );
 }

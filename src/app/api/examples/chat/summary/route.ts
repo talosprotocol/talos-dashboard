@@ -9,7 +9,7 @@ const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8100";
  * GET /api/examples/chat/summary
  * Proxy to {CHAT_URL}/v1/chat/summary
  */
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

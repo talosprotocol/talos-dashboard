@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     try {
       bodyJson = JSON.parse(bodyText);
       SendRequestSchema.parse(bodyJson);
-    } catch (e) {
+    } catch (_e) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_INPUT",
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
       if (res.ok) {
         SendResponseSchema.parse(data);
       }
-    } catch (e) {
+    } catch (_e) {
       return NextResponse.json(
         {
           code: "TALOS_INVALID_UPSTREAM_RESPONSE",
