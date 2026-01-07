@@ -4,13 +4,13 @@ import { Download, AlertTriangle, FileJson, X, CheckCircle, Shield } from "lucid
 import { RedactionLevel } from "@talosprotocol/contracts";
 
 interface ExportDialogProps {
-  mode: "selected" | "filtered";
-  selectedCount: number;
-  filteredCount: number;
-  isOpen: boolean;
-  onExport: (options: { redactionLevel: RedactionLevel }) => void;
-  onClose: () => void;
-  isExporting?: boolean;
+  readonly mode: "selected" | "filtered";
+  readonly selectedCount: number;
+  readonly filteredCount: number;
+  readonly isOpen: boolean;
+  readonly onExport: (options: { redactionLevel: RedactionLevel }) => void;
+  readonly onClose: () => void;
+  readonly isExporting?: boolean;
 }
 
 export function ExportDialog({
@@ -72,9 +72,9 @@ export function ExportDialog({
                 </div>
             )}
 
-            <div>
-                <label className="block text-sm text-zinc-400 mb-2">Redaction Level</label>
-                <div className="grid grid-cols-1 gap-2">
+            <fieldset>
+                <legend className="block text-sm text-zinc-400 mb-2">Redaction Level</legend>
+                <div className="grid grid-cols-1 gap-2" role="radiogroup" aria-label="Redaction Level">
                     <button
                         onClick={() => setRedactionLevel("safe_default")}
                         className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
@@ -106,7 +106,7 @@ export function ExportDialog({
                         {redactionLevel === "strict" && <CheckCircle className="w-4 h-4 ml-auto text-emerald-400" />}
                     </button>
                 </div>
-            </div>
+            </fieldset>
 
             <button
                 disabled={isOverLimit || isExporting}
