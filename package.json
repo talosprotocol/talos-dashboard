@@ -25,7 +25,7 @@
     ]
   },
   "dependencies": {
-    "@talosprotocol/contracts": "^1.1.0",
+    "@talosprotocol/contracts": "file:../talos-contracts/typescript",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.13",
     "clsx": "^2.1.1",
@@ -50,5 +50,15 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.16"
+  },
+  "vitest": {
+    "test": {
+      "exclude": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/submodules/**",
+        "**/.next/**"
+      ]
+    }
   }
 }

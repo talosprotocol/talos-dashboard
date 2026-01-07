@@ -20,7 +20,7 @@ echo "Running typecheck..."
 npm run typecheck
 
 echo "Running tests..."
-npm test -- --run
+npm test -- --run --exclude "**/submodules/**" --exclude "**/.next/**" --exclude "**/node_modules/**"
 
 if [[ "${TALOS_SKIP_BUILD:-false}" != "true" ]]; then
   echo "Running build..."
