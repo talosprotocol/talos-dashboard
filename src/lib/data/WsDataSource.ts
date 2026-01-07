@@ -1,9 +1,9 @@
 import { 
     DataSource, 
-    HttpDataSource, 
     StreamMessage,
     AuditFilters
-} from "./DataSource";
+} from "./DataSourceTypes";
+import { HttpDataSource } from "./HttpDataSource";
 import { WsClient } from "./WsClient";
 
 export class WsDataSource extends HttpDataSource implements DataSource {
