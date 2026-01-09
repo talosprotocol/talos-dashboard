@@ -1,0 +1,6 @@
+node_modules
+submodules
+.git
+.next
+.DS_Store
+.env.local
