@@ -33,6 +33,8 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 

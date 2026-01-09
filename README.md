@@ -68,3 +68,9 @@ npm run dev
 
 1.  [Talos Audit Service](https://github.com/talosprotocol/talos-audit-service)
 2.  [Security Dashboard](https://github.com/talosprotocol/talos/wiki/Security-Dashboard)
+
+## License
+
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
