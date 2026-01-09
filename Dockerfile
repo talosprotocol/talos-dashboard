@@ -1,32 +1,44 @@
 # syntax=docker/dockerfile:1.4
 # Talos Dashboard - Dockerfile
 # Multi-stage build for Next.js
+# Build context: deploy/repos (to include talos-contracts as sibling)
 
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy contracts first (needed for file: dependency)
+COPY talos-contracts/typescript ../talos-contracts/typescript
 
-# Accept NPM_TOKEN as build arg for private package auth
-ARG NPM_TOKEN
-RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" > .npmrc && \
-    echo "@talosprotocol:registry=https://npm.pkg.github.com" >> .npmrc && \
-    npm ci && \
-    rm -f .npmrc
+# Copy dashboard package files
+COPY talos-dashboard/package.json talos-dashboard/package-lock.json* ./
+
+# Build contracts first
+WORKDIR /talos-contracts/typescript
+RUN npm ci && npm run build
+
+# Install dashboard dependencies
+WORKDIR /app
+RUN npm ci
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Copy contracts (for imports)
+COPY --from=deps /talos-contracts /talos-contracts
+
+# Copy node_modules
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy dashboard source
+COPY talos-dashboard/ .
 
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build requires standalone output for Docker
+# Build
 RUN npm run build
 
 # Stage 3: Production
