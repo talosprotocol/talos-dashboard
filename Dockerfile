@@ -34,6 +34,9 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy dashboard source
 COPY talos-dashboard/ .
 
+# Re-link local contracts package (symlink breaks when copied between stages)
+RUN cd /talos-contracts/typescript && npm link && cd /app && npm link @talosprotocol/contracts
+
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
