@@ -34,8 +34,12 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy dashboard source
 COPY talos-dashboard/ .
 
-# Re-link local contracts package (symlink breaks when copied between stages)
-RUN cd /talos-contracts/typescript && npm link && cd /app && npm link @talosprotocol/contracts
+# Re-install contracts package (copy built package into node_modules)
+# npm link doesn't work reliably with Next.js Turbopack
+RUN rm -rf node_modules/@talosprotocol/contracts && \
+    mkdir -p node_modules/@talosprotocol/contracts && \
+    cp -r /talos-contracts/typescript/package.json node_modules/@talosprotocol/contracts/ && \
+    cp -r /talos-contracts/typescript/dist node_modules/@talosprotocol/contracts/
 
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1
