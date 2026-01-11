@@ -12,7 +12,13 @@ import {
     DataMode, 
     DashboardStats, 
     AuditFilters, 
-    StreamMessage 
+    StreamMessage,
+    UserProfile,
+    Upstream,
+    ModelGroup,
+    McpServer,
+    McpPolicy,
+    Secret
 } from "./DataSourceTypes";
 import { HttpDataSource } from "./HttpDataSource";
 import { WsDataSource } from "./WsDataSource"; // Safe static import
@@ -67,6 +73,87 @@ class MockDataSource implements DataSource {
         return MOCK_GATEWAY_STATUS;
     }
 
+    async getMe(): Promise<UserProfile> {
+        return {
+            id: "principal_mock_admin",
+            email: "admin@talos.io",
+            roles: ["admin"],
+            permissions: ["*"]
+        };
+    }
+
+    // LLM Management
+    async listUpstreams(): Promise<Upstream[]> {
+        return [
+            { id: "openai-main", provider: "openai", endpoint: "https://api.openai.com/v1", credentials_ref: "secret:openai", tags: { tier: "pro" }, enabled: true, version: 1 },
+            { id: "anthropic-backup", provider: "anthropic", endpoint: "https://api.anthropic.com/v1", credentials_ref: "secret:anthropic", tags: { tier: "fallback" }, enabled: true, version: 1 }
+        ];
+    }
+    async createUpstream(_data: Partial<Upstream>): Promise<Upstream> { return { ..._data, version: 1 } as Upstream; }
+    async updateUpstream(_id: string, _data: Partial<Upstream>, _expectedVersion: number): Promise<Upstream> { 
+        return { ..._data, id: _id, version: _expectedVersion + 1 } as Upstream; 
+    }
+    async deleteUpstream(_id: string): Promise<void> {}
+
+    async listModelGroups(): Promise<ModelGroup[]> {
+        return [
+            { id: "gpt-4-prod", name: "GPT-4 Production", deployments: [], fallback_groups: [], routing_policy_id: "default", enabled: true, version: 1 }
+        ];
+    }
+    async createModelGroup(_data: Partial<ModelGroup>): Promise<ModelGroup> { return { ..._data, version: 1 } as ModelGroup; }
+    async updateModelGroup(_id: string, _data: Partial<ModelGroup>, _expectedVersion: number): Promise<ModelGroup> {
+        return { ..._data, id: _id, version: _expectedVersion + 1 } as ModelGroup;
+    }
+    async deleteModelGroup(_id: string): Promise<void> {}
+
+    // MCP Management
+    async listMcpServers(): Promise<McpServer[]> {
+        return [
+            { id: "filesystem", name: "Filesystem", endpoint: "stdio://cat", enabled: true, version: 1 }
+        ];
+    }
+    async createMcpServer(_data: Partial<McpServer>): Promise<McpServer> { return { ..._data, version: 1 } as McpServer; }
+    async updateMcpServer(_id: string, _data: Partial<McpServer>, _expectedVersion: number): Promise<McpServer> {
+        return { ..._data, id: _id, version: _expectedVersion + 1 } as McpServer;
+    }
+    async deleteMcpServer(_id: string): Promise<void> {}
+
+    async listMcpPolicies(_teamId?: string): Promise<McpPolicy[]> {
+        return [
+            { id: "pol_1", team_id: "engineering", allowed_servers: ["filesystem"], allowed_tools: ["*"] }
+        ];
+    }
+    async upsertMcpPolicy(_data: Partial<McpPolicy>): Promise<McpPolicy> { return _data as McpPolicy; }
+    async deleteMcpPolicy(_id: string): Promise<void> {}
+
+    // Secrets Management
+    async listSecrets(): Promise<Secret[]> {
+        return [
+            { name: "openai-key", created_at: new Date().toISOString() },
+            { name: "anthropic-key", created_at: new Date().toISOString() },
+        ];
+    }
+    async createSecret(_name: string, _value: string): Promise<void> {}
+    async deleteSecret(_name: string): Promise<void> {}
+
+    async chatCompletion(_apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+        return {
+            id: "chat-mock-" + Date.now(),
+            object: "chat.completion",
+            created: Math.floor(Date.now() / 1000),
+            model: (body.model as string) || "mock-model",
+            choices: [{
+                index: 0,
+                message: {
+                    role: "assistant",
+                    content: "This is a mock response from the Talos Dashboard. Playground is connected via MockDataSource."
+                },
+                finish_reason: "stop"
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 }
+        };
+    }
+
     async getStats(range: { from: number; to: number }): Promise<DashboardStats> {
         const inRange = this.events.filter(e => e.timestamp >= range.from && e.timestamp <= range.to);
 
@@ -93,12 +180,15 @@ class MockDataSource implements DataSource {
 
         return {
             requests_24h: total,
+            tokens_24h: total * 500, // Mock 500 tokens per request
+            cost_24h: total * 0.0075, // Mock $0.0075 per request
             auth_success_rate: total > 0 ? ok / total : 1,
             denial_reason_counts: denial_counts,
             request_volume_series: Array.from(seriesMap.entries())
                 .map(([time, data]) => ({ time, ...data }))
                 .sort((a, b) => a.time - b.time),
             latency_percentiles: { p50: 5, p95: 12, p99: 45 }, // Mocked
+            latency_avg: 7.5,
         };
     }
 
@@ -178,6 +268,38 @@ export class SqliteDataSource implements DataSource {
 
     async getGatewayStatus(): Promise<GatewayStatus> {
         return MOCK_GATEWAY_STATUS;
+    }
+
+    async getMe(): Promise<UserProfile> {
+        return new MockDataSource().getMe();
+    }
+
+    async listUpstreams(): Promise<Upstream[]> { return new MockDataSource().listUpstreams(); }
+    async createUpstream(data: Partial<Upstream>): Promise<Upstream> { return new MockDataSource().createUpstream(data); }
+    async updateUpstream(id: string, data: Partial<Upstream>, expectedVersion: number): Promise<Upstream> { return new MockDataSource().updateUpstream(id, data, expectedVersion); }
+    async deleteUpstream(id: string): Promise<void> { return new MockDataSource().deleteUpstream(id); }
+
+    async listModelGroups(): Promise<ModelGroup[]> { return new MockDataSource().listModelGroups(); }
+    async createModelGroup(data: Partial<ModelGroup>): Promise<ModelGroup> { return new MockDataSource().createModelGroup(data); }
+    async updateModelGroup(id: string, data: Partial<ModelGroup>, expectedVersion: number): Promise<ModelGroup> { return new MockDataSource().updateModelGroup(id, data, expectedVersion); }
+    async deleteModelGroup(id: string): Promise<void> { return new MockDataSource().deleteModelGroup(id); }
+
+    async listMcpServers(): Promise<McpServer[]> { return new MockDataSource().listMcpServers(); }
+    async createMcpServer(data: Partial<McpServer>): Promise<McpServer> { return new MockDataSource().createMcpServer(data); }
+    async updateMcpServer(id: string, data: Partial<McpServer>, expectedVersion: number): Promise<McpServer> { return new MockDataSource().updateMcpServer(id, data, expectedVersion); }
+    async deleteMcpServer(id: string): Promise<void> { return new MockDataSource().deleteMcpServer(id); }
+
+    async listMcpPolicies(teamId?: string): Promise<McpPolicy[]> { return new MockDataSource().listMcpPolicies(teamId); }
+    async upsertMcpPolicy(data: Partial<McpPolicy>): Promise<McpPolicy> { return new MockDataSource().upsertMcpPolicy(data); }
+    async deleteMcpPolicy(id: string): Promise<void> { return new MockDataSource().deleteMcpPolicy(id); }
+
+    // Secrets Management
+    async listSecrets(): Promise<Secret[]> { return new MockDataSource().listSecrets(); }
+    async createSecret(name: string, value: string): Promise<void> { return new MockDataSource().createSecret(name, value); }
+    async deleteSecret(name: string): Promise<void> { return new MockDataSource().deleteSecret(name); }
+
+    async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+        return new MockDataSource().chatCompletion(apiKey, body);
     }
 
     async getStats(range: { from: number; to: number }): Promise<DashboardStats> {

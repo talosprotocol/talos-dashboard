@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, Suspense } from "react";
+import { useState, useCallback, useEffect, Suspense, useMemo } from "react";
 import { AuditTable } from "@/components/dashboard/AuditTable";
 import { dataSource, AuditFilters, StreamMessage } from "@/lib/data/DataSource";
 import { AuditEvent } from "@/lib/data/schemas";
@@ -8,8 +8,10 @@ import { ListFilter } from "lucide-react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { AuditFiltersPanel } from "@/components/dashboard/AuditFiltersPanel";
+import { GapBanner } from "@/components/dashboard/GapBanner";
+import { CursorMismatchBanner, CursorValidationError } from "@/components/dashboard/CursorMismatchBanner";
 import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
-import { RedactionLevel } from "@talosprotocol/contracts";
+import { RedactionLevel, checkCursorContinuity, CursorGap, assertCursorInvariant } from "@talosprotocol/contracts";
 import { useSearchParams, useRouter } from "next/navigation";
 
 function AuditPageContent() {
@@ -30,6 +32,28 @@ function AuditPageContent() {
     const [showExport, setShowExport] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    // Gap Detection State
+    const [cursorGaps, setCursorGaps] = useState<CursorGap[]>([]);
+    const [isBackfilling, setIsBackfilling] = useState(false);
+    const [backfillProgress, setBackfillProgress] = useState(0);
+    const [gapDismissed, setGapDismissed] = useState(false);
+
+    // Cursor Mismatch State
+    const [cursorErrors, setCursorErrors] = useState<CursorValidationError[]>([]);
+    const [mismatchDismissed, setMismatchDismissed] = useState(false);
+
+    // Compute outcome counts for export preview
+    const outcomeCounts = useMemo(() => {
+        const eventsToCount = selectedIds.size > 0 
+            ? data.filter(e => selectedIds.has(e.event_id))
+            : data;
+        return eventsToCount.reduce((acc, e) => {
+            const outcome = (e.outcome as "OK" | "DENY" | "ERROR") || "OK";
+            acc[outcome] = (acc[outcome] || 0) + 1;
+            return acc;
+        }, { OK: 0, DENY: 0, ERROR: 0 });
+    }, [data, selectedIds]);
 
     // 1. Initialize Filters from URL
     useEffect(() => {
@@ -121,6 +145,80 @@ function AuditPageContent() {
         return () => unsubscribe();
     }, [filters, fetchMore, handleLiveEvent]); 
 
+    // Gap Detection Effect
+    useEffect(() => {
+        if (data.length < 2) {
+            setCursorGaps([]);
+            return;
+        }
+        // Prepare events for continuity check
+        const eventsForCheck = data.map(e => ({
+            cursor: e.cursor || "",
+            timestamp: new Date(e.timestamp).getTime()
+        }));
+        const result = checkCursorContinuity(eventsForCheck);
+        setCursorGaps(result.gaps);
+        setGapDismissed(false); // Reset dismiss on new data
+    }, [data]);
+
+    // Cursor Validation Effect
+    useEffect(() => {
+        const errors: CursorValidationError[] = [];
+        for (const event of data) {
+            const result = assertCursorInvariant({
+                timestamp: Math.floor(new Date(event.timestamp).getTime() / 1000),
+                event_id: event.event_id,
+                cursor: event.cursor || ""
+            });
+            if (!result.ok && result.reason) {
+                errors.push({
+                    eventId: event.event_id,
+                    cursor: event.cursor || "",
+                    derived: result.derived,
+                    reason: result.reason as "CURSOR_MISMATCH" | "INVALID_FRAME"
+                });
+            }
+        }
+        setCursorErrors(errors);
+        setMismatchDismissed(false);
+    }, [data]);
+
+    // Backfill Handler
+    const handleBackfill = useCallback(async () => {
+        if (cursorGaps.length === 0) return;
+        setIsBackfilling(true);
+        setBackfillProgress(0);
+        
+        // For each gap, attempt to fetch events in range
+        for (let i = 0; i < cursorGaps.length; i++) {
+            const gap = cursorGaps[i];
+            try {
+                // Fetch events after gap.from_cursor up to gap.to_cursor
+                const page = await dataSource.listAuditEvents({
+                    limit: 100,
+                    cursor: gap.from_cursor,
+                    filters
+                });
+                
+                // Insert fetched events into data
+                if (page.items.length > 0) {
+                    setData(prev => {
+                        const newEvents = page.items.filter(
+                            item => !prev.some(e => e.event_id === item.event_id)
+                        );
+                        return [...prev, ...newEvents].sort((a, b) => 
+                            (a.cursor || "").localeCompare(b.cursor || ""));
+                    });
+                }
+            } catch (e) {
+                console.error("Backfill failed for gap:", gap, e);
+            }
+            setBackfillProgress(((i + 1) / cursorGaps.length) * 100);
+        }
+        
+        setIsBackfilling(false);
+    }, [cursorGaps, filters]);
+
     // Handle Export
     const handleExport = async ({ redactionLevel }: { redactionLevel: RedactionLevel }) => {
         setIsExporting(true);
@@ -128,13 +226,31 @@ function AuditPageContent() {
             // If selection exists, export selected. Else export current view (up to limit)
             const eventsToExport = selectedIds.size > 0 
                 ? data.filter(e => selectedIds.has(e.event_id))
-                : data; // Export loaded/visible events for v1.1
+                : data;
+            
+            // Compute cursor range from first and last events
+            const sortedEvents = [...eventsToExport].sort((a, b) => 
+                (a.cursor || "").localeCompare(b.cursor || ""));
+            const cursorRange = sortedEvents.length > 0 ? {
+                start: sortedEvents[0]?.cursor,
+                end: sortedEvents[sortedEvents.length - 1]?.cursor
+            } : undefined;
+
+            // Fetch gateway status for snapshot
+            let gatewaySnapshot;
+            try {
+                gatewaySnapshot = await dataSource.getGatewayStatus();
+            } catch (e) {
+                console.warn("Could not fetch gateway status for export:", e);
+            }
 
             await downloadBulkEvidenceBundle({
                 events: eventsToExport,
                 redactionLevel,
                 dashboardVersion: "1.0.0",
-                filters: filters, // Pass current filters for metadata
+                filters: filters,
+                cursorRange,
+                gatewaySnapshot,
             });
             setShowExport(false);
             setSelectedIds(new Set()); 
@@ -185,6 +301,25 @@ function AuditPageContent() {
             )}
 
             <div className="flex-1 p-6 overflow-hidden">
+                {/* Gap Warning Banner */}
+                {!gapDismissed && cursorGaps.length > 0 && (
+                    <GapBanner
+                        gaps={cursorGaps}
+                        onBackfill={handleBackfill}
+                        isBackfilling={isBackfilling}
+                        progress={backfillProgress}
+                        onDismiss={() => setGapDismissed(true)}
+                    />
+                )}
+
+                {/* Cursor Mismatch Banner */}
+                {!mismatchDismissed && cursorErrors.length > 0 && (
+                    <CursorMismatchBanner
+                        errors={cursorErrors}
+                        onDismiss={() => setMismatchDismissed(true)}
+                    />
+                )}
+
                 <AuditTable
                     data={data}
                     onFetchMore={() => fetchMore(false)}
@@ -202,6 +337,7 @@ function AuditPageContent() {
                 onClose={() => setShowExport(false)}
                 isExporting={isExporting}
                 onExport={handleExport}
+                outcomeCounts={outcomeCounts}
             />
         </main>
     );

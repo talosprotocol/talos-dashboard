@@ -1,5 +1,5 @@
 import { AuditEvent, CursorPage, GatewayStatus } from "./schemas";
-import { AuditFilters, DashboardStats, DataSource, StreamMessage } from "./DataSourceTypes";
+import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret } from "./DataSourceTypes";
 import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
 import { validateCursor } from "../integrity/cursor";
 
@@ -46,7 +46,216 @@ export class HttpDataSource implements DataSource {
         return res.json();
     }
 
+    async getMe(): Promise<UserProfile> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/me`);
+        if (!res.ok) throw new Error("Failed to fetch user profile");
+        return res.json();
+    }
+
+    // LLM Management
+    async listUpstreams(): Promise<Upstream[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/upstreams`);
+        if (!res.ok) throw new Error("Failed to list upstreams");
+        const data = await res.json();
+        return data.upstreams;
+    }
+
+    async createUpstream(data: Partial<Upstream>): Promise<Upstream> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/upstreams`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Failed to create upstream");
+        return res.json();
+    }
+
+    async updateUpstream(id: string, data: Partial<Upstream>, expectedVersion: number): Promise<Upstream> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/upstreams/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, expected_version: expectedVersion })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail?.error?.message || "Failed to update upstream");
+        }
+        return res.json();
+    }
+
+    async deleteUpstream(id: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/upstreams/${id}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete upstream");
+    }
+
+    async listModelGroups(): Promise<ModelGroup[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/model-groups`); // Adjusted to match common plural
+        if (!res.ok) {
+            // Fallback for singular if plural fails
+            const res2 = await fetch(`${this.baseUrl}/admin/v1/llm/model_groups`);
+            if (!res2.ok) throw new Error("Failed to list model groups");
+            const data = await res2.json();
+            return data.model_groups;
+        }
+        const data = await res.json();
+        return data.model_groups;
+    }
+
+    async createModelGroup(data: Partial<ModelGroup>): Promise<ModelGroup> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/model-groups`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Failed to create model group");
+        return res.json();
+    }
+
+    async updateModelGroup(id: string, data: Partial<ModelGroup>, expectedVersion: number): Promise<ModelGroup> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/model-groups/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, expected_version: expectedVersion })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail?.error?.message || "Failed to update model group");
+        }
+        return res.json();
+    }
+
+    async deleteModelGroup(id: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/llm/model-groups/${id}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete model group");
+    }
+
+    // MCP Management
+    async listMcpServers(): Promise<McpServer[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/servers`);
+        if (!res.ok) throw new Error("Failed to list MCP servers");
+        const data = await res.json();
+        return data.servers;
+    }
+
+    async createMcpServer(data: Partial<McpServer>): Promise<McpServer> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/servers`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Failed to create MCP server");
+        return res.json();
+    }
+
+    async updateMcpServer(id: string, data: Partial<McpServer>, expectedVersion: number): Promise<McpServer> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/servers/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, expected_version: expectedVersion })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail?.error?.message || "Failed to update MCP server");
+        }
+        return res.json();
+    }
+
+    async deleteMcpServer(id: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/servers/${id}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete MCP server");
+    }
+
+    async listMcpPolicies(teamId?: string): Promise<McpPolicy[]> {
+        const url = new URL(`${this.baseUrl}/admin/v1/mcp/policies`);
+        if (teamId) url.searchParams.set("team_id", teamId);
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error("Failed to list MCP policies");
+        const data = await res.json();
+        return data.policies;
+    }
+
+    async upsertMcpPolicy(data: Partial<McpPolicy>): Promise<McpPolicy> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/policies`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Failed to upsert MCP policy");
+        return res.json();
+    }
+
+    async deleteMcpPolicy(id: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/mcp/policies/${id}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete MCP policy");
+    }
+
+    async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+        const res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `Chat failed: ${res.status}`);
+        }
+        return res.json() as Promise<Record<string, unknown>>;
+    }
+
+    // Secrets Management
+    async listSecrets(): Promise<Secret[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets`);
+        if (!res.ok) throw new Error("Failed to list secrets");
+        const data = await res.json();
+        return data.secrets;
+    }
+
+    async createSecret(name: string, value: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, value })
+        });
+        if (!res.ok) throw new Error("Failed to create secret");
+    }
+
+    async deleteSecret(name: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets/${name}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete secret");
+    }
+
     async getStats(): Promise<DashboardStats> {
+        // 1. Fetch real telemetry stats from backend
+        // Note: Admin principal required, should be handled by session/cookie
+        let realStats: { 
+            requests_total: number; 
+            tokens_total: number; 
+            cost_usd: number; 
+            latency_avg_ms: number; 
+        } | null = null;
+        try {
+            const res = await fetch(`${this.baseUrl}/admin/v1/telemetry/stats?window_hours=24`);
+            if (res.ok) {
+                realStats = await res.json();
+            }
+        } catch (e) {
+            console.error("Failed to fetch real telemetry stats", e);
+        }
+
+        // 2. Fallback/Complementary enrichment from audit events (for charts)
         const res = await this.listAuditEvents({ limit: 500 });
         const events = res.items;
 
@@ -70,7 +279,10 @@ export class HttpDataSource implements DataSource {
         });
 
         return {
-            requests_24h: total,
+            requests_24h: realStats?.requests_total ?? total,
+            tokens_24h: realStats?.tokens_total,
+            cost_24h: realStats?.cost_usd,
+            latency_avg: realStats?.latency_avg_ms,
             auth_success_rate: total > 0 ? ok / total : 1,
             denial_reason_counts: denial_counts,
             request_volume_series: Array.from(seriesMap.entries())

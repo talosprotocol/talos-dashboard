@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Download, AlertTriangle, FileJson, X, CheckCircle, Shield } from "lucide-react";
+import { Download, AlertTriangle, FileJson, X, CheckCircle, Shield, BarChart3 } from "lucide-react";
 import { RedactionLevel } from "@talosprotocol/contracts";
 
 interface ExportDialogProps {
@@ -11,6 +11,10 @@ interface ExportDialogProps {
   readonly onExport: (options: { redactionLevel: RedactionLevel }) => void;
   readonly onClose: () => void;
   readonly isExporting?: boolean;
+  readonly exportProgress?: number;
+  readonly exportStage?: "preparing" | "validating" | "downloading";
+  // For preview
+  readonly outcomeCounts?: { OK: number; DENY: number; ERROR: number };
 }
 
 export function ExportDialog({
@@ -20,7 +24,10 @@ export function ExportDialog({
   isOpen,
   onExport,
   onClose,
-  isExporting
+  isExporting,
+  exportProgress,
+  exportStage,
+  outcomeCounts
 }: ExportDialogProps) {
   const [redactionLevel, setRedactionLevel] = useState<RedactionLevel>("safe_default");
 
@@ -28,6 +35,11 @@ export function ExportDialog({
 
   const count = mode === "selected" ? selectedCount : filteredCount;
   const isOverLimit = count > 10000;
+
+  const stageLabel = exportStage === "preparing" ? "Preparing bundle..." 
+    : exportStage === "validating" ? "Validating events..."
+    : exportStage === "downloading" ? "Creating download..."
+    : "Processing...";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -61,6 +73,30 @@ export function ExportDialog({
                      <span className="text-white">~{(count * 0.5).toFixed(1)} KB</span>
                 </div>
             </div>
+
+            {/* Integrity Preview */}
+            {outcomeCounts && count > 0 && (
+                <div className="bg-zinc-900/50 p-4 rounded-lg border border-zinc-800">
+                    <div className="flex items-center gap-2 text-sm text-zinc-400 mb-2">
+                        <BarChart3 className="w-4 h-4" />
+                        <span>Integrity Preview</span>
+                    </div>
+                    <div className="flex gap-3 text-xs">
+                        <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span className="text-zinc-300">OK: {outcomeCounts.OK}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <span className="text-zinc-300">DENY: {outcomeCounts.DENY}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            <span className="text-zinc-300">ERROR: {outcomeCounts.ERROR}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isOverLimit && (
                 <div className="flex items-start gap-2 bg-red-900/20 border border-red-900/50 p-3 rounded-lg text-red-200 text-sm">
@@ -107,6 +143,22 @@ export function ExportDialog({
                     </button>
                 </div>
             </fieldset>
+
+            {/* Progress Bar */}
+            {isExporting && (
+                <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-zinc-400">
+                        <span>{stageLabel}</span>
+                        <span>{exportProgress || 0}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div 
+                            className="h-full bg-emerald-500 transition-all duration-300"
+                            style={{ width: `${exportProgress || 0}%` }}
+                        />
+                    </div>
+                </div>
+            )}
 
             <button
                 disabled={isOverLimit || isExporting}

@@ -6,6 +6,8 @@ import { getNavItems, getBreadcrumbs, isActiveRoute } from "@/lib/navRegistry";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { Shield, User } from "lucide-react";
 
 // =============================================================================
 // Types
@@ -236,6 +238,7 @@ export function AppShell({ children }: Readonly<AppShellProps>) {
 
                         {/* Right Side */}
                         <div className="flex items-center gap-3">
+                            <UserBadge />
                             <HealthIndicator status={globalStatus} isStale={isStale} />
                             <div className="lg:hidden">
                                 <ThemeToggle />
@@ -342,6 +345,35 @@ function HealthIndicator({ status, isStale }: Readonly<{ status: AggregateStatus
         >
             <span className={`w-1.5 h-1.5 rounded-full ${display.dot}`} aria-hidden="true" />
             {display.label}
+        </div>
+    );
+}
+
+function UserBadge() {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return <div className="h-8 w-24 bg-[var(--panel-hover)] animate-pulse rounded-full" />;
+    }
+
+    if (!user) return null;
+
+    return (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--panel-hover)] border border-[var(--glass-border)] rounded-full text-xs transition-all hover:bg-[var(--accent)]/5">
+            <div className="w-5 h-5 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">
+                <User size={12} />
+            </div>
+            <div className="flex flex-col">
+                <span className="font-semibold text-[var(--text-primary)] leading-none truncate max-w-[80px]">
+                    {user.id} 
+                </span>
+                <div className="flex items-center gap-1 mt-0.5">
+                    <Shield size={8} className="text-emerald-500" />
+                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-tight font-bold">
+                        {user.roles[0] || "No Role"}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 }
