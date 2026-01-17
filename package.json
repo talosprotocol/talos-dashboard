@@ -26,7 +26,7 @@
     ]
   },
   "dependencies": {
-    "@talosprotocol/contracts": "file:../talos-contracts/typescript",
+    "@talosprotocol/contracts": "file:../../contracts/typescript",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.13",
     "clsx": "^2.1.1",
