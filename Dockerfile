@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1.4
-# Talos Dashboard - Dockerfile
-# Multi-stage build for Next.js
+# Talos Dashboard - Production Dockerfile
 # Build context: . (Root of monorepo)
 
+# ========================================
 # Stage 1: Dependencies
+# ========================================
 FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy contracts first (needed for file: dependency)
-# We place it at /contracts/typescript so that from /app, ../../contracts/typescript resolves correctly
 COPY contracts/typescript /contracts/typescript
 
 # Copy dashboard package files
@@ -22,8 +22,14 @@ RUN npm install && npm run build
 WORKDIR /app
 RUN npm install
 
+# ========================================
 # Stage 2: Builder
+# ========================================
 FROM node:20-alpine AS builder
+
+ARG GIT_SHA=unknown
+ARG VERSION=unknown
+
 WORKDIR /app
 
 # Copy contracts (for imports)
@@ -36,7 +42,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY site/dashboard/ .
 
 # Re-install contracts package (copy built package into node_modules)
-# npm link doesn't work reliably with Next.js Turbopack
 RUN rm -rf node_modules/@talosprotocol/contracts && \
     mkdir -p node_modules/@talosprotocol/contracts && \
     cp -r /contracts/typescript/package.json node_modules/@talosprotocol/contracts/ && \
@@ -46,21 +51,29 @@ RUN rm -rf node_modules/@talosprotocol/contracts && \
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build
+# Build with standalone output
 RUN npm run build
 
-# Stage 3: Production
+# ========================================
+# Stage 3: Production Runtime
+# ========================================
 FROM node:20-alpine AS runner
+
+ARG GIT_SHA=unknown
+ARG VERSION=unknown
+ARG BUILD_TIME=unknown
+
 WORKDIR /app
 
-LABEL org.opencontainers.image.licenses="Apache-2.0"
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    GIT_SHA=${GIT_SHA} \
+    VERSION=${VERSION} \
+    BUILD_TIME=${BUILD_TIME}
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create non-root user (Alpine Linux syntax)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -u 1001 -S nextjs -G nodejs
 
 # Copy built assets
 COPY --from=builder /app/public ./public
@@ -74,4 +87,14 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Healthcheck using wget (alpine has wget by default)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+  CMD wget -qO- http://localhost:3000/healthz || exit 1
+
 CMD ["node", "server.js"]
+
+# OCI Labels
+LABEL org.opencontainers.image.source="https://github.com/talosprotocol/talos" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.licenses="Apache-2.0"
