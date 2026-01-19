@@ -51,7 +51,22 @@ The dashboard is configured via environment variables (or `.env.local`):
 ```bash
 npm run dev
 # Open http://localhost:3000
-```
+# You will be redirected to the Login page.
+
+## Authentication
+
+The dashboard is secured with NextAuth v5.
+
+**Default Credentials:**
+- **Email:** `admin@talos.security`
+- **Password:** `talos_secure_start`
+
+**Configuration:**
+Set the following environment variables in `.env.local` to override defaults:
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `AUTH_SECRET` (Required for production security)
+
 
 ## Operational Interface
 
@@ -74,3 +89,4 @@ npm run dev
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+```
