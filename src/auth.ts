@@ -13,8 +13,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Production-ready: Use environment variables for admin access
         // In a real DB-backed app, this would query the DB.
         // For this dashboard, env-based admin is a valid production pattern (like Grafana).
-        const adminEmail = process.env.ADMIN_EMAIL || "admin@talos.security";
-        const adminPassword = process.env.ADMIN_PASSWORD || "talos_secure_start";
+        const adminEmail = process.env.ADMIN_EMAIL;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (!adminEmail || !adminPassword) {
+             console.warn("Missing ADMIN_EMAIL or ADMIN_PASSWORD in environment variables.");
+             return null;
+        }
 
         if (credentials.email === adminEmail && credentials.password === adminPassword) {
           return {
@@ -30,6 +35,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth;
+      // Protect Console and Status routes
+      const isOnDashboard = nextUrl.pathname.startsWith('/console') || nextUrl.pathname.startsWith('/status') || nextUrl.pathname === '/';
+      const isAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
+
+      if (isOnDashboard) {
+        if (isLoggedIn) return true;
+        return false; // Redirects to login
+      } else if (isAuthPage) {
+        if (isLoggedIn) {
+          return Response.redirect(new URL('/console', nextUrl));
+        }
+        return true;
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         // @ts-expect-error - user type extension
@@ -46,7 +68,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
-  // pages: {
-  //   signIn: "/login",
-  // }
+  pages: {
+    signIn: "/login",
+    newUser: "/signup"
+  }
 });
