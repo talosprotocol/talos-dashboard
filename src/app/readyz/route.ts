@@ -8,7 +8,7 @@ export async function GET() {
       version: process.env.VERSION
     };
     return NextResponse.json({ status: 'ready', config });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ status: 'not ready' }, { status: 503 });
   }
 }

@@ -27,7 +27,7 @@ export function ActivityFeed({ events, hasMore, onLoadMore, isLoading }: Activit
                 )}
 
                 <div className="space-y-2 pb-4">
-                    {events.map((event) => (
+                    {events && events.map((event) => (
                         <ActivityItem
                             key={`${event.timestamp}-${event.event_id}`} // Dedupe key requirement
                             event={event}
@@ -106,7 +106,7 @@ function ActivityItem({ event, onClick }: { event: AuditEvent, onClick: () => vo
                     <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                         <Terminal className="w-3 h-3" />
                         <span className="truncate max-w-[120px]" title={event.peer_id || event.agent_id}>
-                            {event.peer_id ? `Peer: ${event.peer_id.slice(0, 8)}...` : `Agent: ${event.agent_id.slice(0, 8)}...`}
+                            {event.peer_id ? `Peer: ${event.peer_id.slice(0, 8)}...` : (event.agent_id ? `Agent: ${event.agent_id.slice(0, 8)}...` : 'Unknown')}
                         </span>
                     </div>
 

@@ -18,7 +18,7 @@ import { ProofDrawer } from "./ProofDrawer";
 
 interface AuditTableProps {
     readonly data: AuditEvent[];
-    readonly onFetchMore: () => void;
+    readonly onFetchMore?: () => void;
     readonly isLoading: boolean;
     readonly selectedIds?: Set<string>;
     readonly onSelectionChange?: (ids: Set<string>) => void;
@@ -254,7 +254,7 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
                     onScroll={(e) => {
                         const target = e.target as HTMLDivElement;
                         if (target.scrollHeight - target.scrollTop - target.clientHeight < 200) {
-                            if (!isLoading) onFetchMore();
+                            if (!isLoading && onFetchMore) onFetchMore();
                         }
                     }}
                 >

@@ -37,17 +37,43 @@ export function useDataSource() {
         async function init() {
             try {
                 const now = Math.floor(Date.now() / 1000);
-                const [statsData, eventsPage, statusData] = await Promise.all([
+                
+                // Fetch stats and events in parallel, but handle failures gracefully
+                const [statsData, eventsPage, statusData] = await Promise.allSettled([
                     dataSource.getStats({ from: now - 86400, to: now }),
                     dataSource.listAuditEvents({ limit: 20 }),
                     dataSource.getGatewayStatus()
                 ]);
 
-                setStats(statsData);
-                setEvents(eventsPage.items);
-                setCursor(eventsPage.next_cursor);
-                setHasMore(eventsPage.has_more);
-                setGatewayStatus(statusData);
+                // Process stats
+                if (statsData.status === 'fulfilled') {
+                    setStats(statsData.value);
+                } else {
+                    console.warn('Failed to fetch stats:', statsData.reason);
+                    // Set empty stats to prevent loading spinner
+                    setStats({
+                        requests_24h: 0,
+                        auth_success_rate: 0,
+                        denial_reason_counts: {},
+                        request_volume_series: []
+                    });
+                }
+
+                // Process events
+                if (eventsPage.status === 'fulfilled') {
+                    setEvents(eventsPage.value.items);
+                    setCursor(eventsPage.value.next_cursor);
+                    setHasMore(eventsPage.value.has_more);
+                } else {
+                    console.warn('Failed to fetch events:', eventsPage.reason);
+                }
+
+                // Process gateway status
+                if (statusData.status === 'fulfilled') {
+                    setGatewayStatus(statusData.value);
+                } else {
+                    console.warn('Failed to fetch gateway status:', statusData.reason);
+                }
             } catch (err) {
                 console.error("Failed to load initial data", err);
             } finally {

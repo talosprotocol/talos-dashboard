@@ -34,15 +34,15 @@ const BACKFILL_MAX_EVENTS = 1000;
 const BACKFILL_PAGE_SIZE = 100;
 
 export class HttpDataSource implements DataSource {
-    private readonly baseUrl = "http://localhost:8000";
+    private readonly baseUrl = process.env.NEXT_PUBLIC_TALOS_GATEWAY_URL || "http://localhost:8000";
 
     protected events: AuditEvent[] = []; 
 
     // Constructor removed (useless)
 
     async getGatewayStatus(): Promise<GatewayStatus> {
-        const res = await fetch(`${this.baseUrl}/api/gateway/status`);
-        if (!res.ok) throw new Error("Failed to fetch status");
+        const res = await fetch('/api/gateway/status');
+        if (!res.ok) throw new Error('Failed to fetch status');
         return res.json();
     }
 
@@ -238,9 +238,8 @@ export class HttpDataSource implements DataSource {
     }
 
     async getStats(): Promise<DashboardStats> {
-        // 1. Fetch real telemetry stats from backend
-        // Note: Admin principal required, should be handled by session/cookie
-        let realStats: { 
+        // 1. Fetch real telemetry stats (usage/tokens)
+        let usageStats: { 
             requests_total: number; 
             tokens_total: number; 
             cost_usd: number; 
@@ -248,46 +247,28 @@ export class HttpDataSource implements DataSource {
         } | null = null;
         try {
             const res = await fetch(`${this.baseUrl}/admin/v1/telemetry/stats?window_hours=24`);
-            if (res.ok) {
-                realStats = await res.json();
-            }
+            if (res.ok) usageStats = await res.json();
         } catch (e) {
-            console.error("Failed to fetch real telemetry stats", e);
+            console.error("Failed to fetch usage stats", e);
         }
 
-        // 2. Fallback/Complementary enrichment from audit events (for charts)
-        const res = await this.listAuditEvents({ limit: 500 });
-        const events = res.items;
-
-        const total = events.length;
-        const ok = events.filter(e => e.outcome === "OK").length;
-
-        const denial_counts: Record<string, number> = {};
-        events.filter(e => e.outcome === "DENY").forEach(e => {
-            const reason = e.denial_reason || "UNKNOWN";
-            denial_counts[reason] = (denial_counts[reason] || 0) + 1;
-        });
-
-        const seriesMap = new Map<number, { ok: number; deny: number; error: number }>();
-        events.forEach(e => {
-            const bucket = Math.floor(e.timestamp / 3600) * 3600;
-            if (!seriesMap.has(bucket)) seriesMap.set(bucket, { ok: 0, deny: 0, error: 0 });
-            const entry = seriesMap.get(bucket)!;
-            if (e.outcome === "OK") entry.ok++;
-            else if (e.outcome === "DENY") entry.deny++;
-            else entry.error++;
-        });
+        // 2. Fetch real audit stats (denials, volume series)
+        let auditStats: DashboardStats | null = null;
+        try {
+            const res = await fetch(`${this.baseUrl}/admin/v1/audit/stats?window_hours=24`);
+            if (res.ok) auditStats = await res.json();
+        } catch (e) {
+            console.error("Failed to fetch audit stats", e);
+        }
 
         return {
-            requests_24h: realStats?.requests_total ?? total,
-            tokens_24h: realStats?.tokens_total,
-            cost_24h: realStats?.cost_usd,
-            latency_avg: realStats?.latency_avg_ms,
-            auth_success_rate: total > 0 ? ok / total : 1,
-            denial_reason_counts: denial_counts,
-            request_volume_series: Array.from(seriesMap.entries())
-                .map(([time, data]) => ({ time, ...data }))
-                .sort((a, b) => a.time - b.time),
+            requests_24h: auditStats?.requests_24h ?? usageStats?.requests_total ?? 0,
+            tokens_24h: usageStats?.tokens_total ?? 0,
+            cost_24h: usageStats?.cost_usd ?? 0,
+            latency_avg: usageStats?.latency_avg_ms ?? 0,
+            auth_success_rate: 1.0, 
+            denial_reason_counts: auditStats?.denial_reason_counts ?? {},
+            request_volume_series: auditStats?.request_volume_series ?? [],
             latency_percentiles: { p50: 10, p95: 20, p99: 50 },
         };
     }
@@ -297,12 +278,13 @@ export class HttpDataSource implements DataSource {
         cursor?: string;
         filters?: AuditFilters
     }): Promise<CursorPage<AuditEvent>> {
-        const url = new URL(`${this.baseUrl}/api/events`);
-        url.searchParams.set("limit", params.limit.toString());
-        if (params.cursor) url.searchParams.set("before", params.cursor);
+        // Call dashboard proxy, not direct service URL
+        const url = new URL('/api/events', window.location.origin);
+        url.searchParams.set('limit', params.limit.toString());
+        if (params.cursor) url.searchParams.set('before', params.cursor);
 
         const res = await fetch(url.toString());
-        if (!res.ok) throw new Error("Failed to fetch events");
+        if (!res.ok) throw new Error('Failed to fetch events');
 
         const data: CursorPage<AuditEvent> = await res.json();
 
@@ -341,21 +323,61 @@ export class HttpDataSource implements DataSource {
     }
 
     subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
-        const state = {
-            oldestLoadedCursor: undefined as string | undefined
+        const es = new EventSource("/api/audit/stream");
+
+        es.addEventListener("meta", (e: MessageEvent) => {
+            // Protocol version check could happen here
+            console.log("[AuditStream] Connected", JSON.parse(e.data));
+        });
+
+        es.addEventListener("audit_event", (e: MessageEvent) => {
+            try {
+                const event: AuditEvent = JSON.parse(e.data);
+                
+                // Validate integrity
+                this.ingestEvent(event);
+
+                // Client-side filtering (stream is full firehose)
+                if (filters) {
+                    if (filters.session_id && event.session_id !== filters.session_id) return;
+                    if (filters.outcome && event.outcome !== filters.outcome) return;
+                    if (filters.correlation_id && event.correlation_id !== filters.correlation_id) return;
+                    if (filters.denial_reason && event.denial_reason !== filters.denial_reason) return;
+                }
+
+                cb({ type: "audit_event", event });
+            } catch (err) {
+                console.error("[AuditStream] Parse error", err);
+            }
+        });
+
+        es.addEventListener("heartbeat", () => {
+            // Keep-alive received
+        });
+
+        es.addEventListener("error", (e: MessageEvent) => {
+            try {
+                const err = JSON.parse(e.data);
+                console.error("[AuditStream] Server Error:", err);
+                es.close();
+            } catch {
+                // If not JSON, it might be a generic error
+            }
+        });
+
+        es.onerror = (e) => {
+            console.error("[AuditStream] Connection error, checking session...", e);
+            // Verify session is still valid (per spec)
+            fetch("/api/auth/session").then(res => {
+                if (res.status === 401 || res.status === 403) {
+                    console.error("[AuditStream] Session invalid, redirecting to login");
+                    window.location.href = "/login"; // Or appropriate auth redirect
+                    es.close();
+                }
+            }).catch(() => {}); // If auth check fails, let SSE retry
         };
 
-        const interval = setInterval(async () => {
-            try {
-                await this.pollStatus(cb);
-                state.oldestLoadedCursor = await this.pollRecentEvents(cb, state.oldestLoadedCursor, filters);
-                state.oldestLoadedCursor = await this.handleBackfill(cb, state.oldestLoadedCursor, filters);
-            } catch (e) {
-                console.error("Polling error", e);
-            }
-        }, 2000);
-
-        return () => clearInterval(interval);
+        return () => es.close();
     }
 
     private async pollStatus(cb: (msg: StreamMessage) => void) {

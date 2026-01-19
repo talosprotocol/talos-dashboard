@@ -37,7 +37,7 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                     <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-3">Integrity State</h3>
 
                     {/* CRITICAL OVERLAY */}
-                    {event.integrity.failure_reason === "CURSOR_MISMATCH" && (
+                    {event.integrity?.failure_reason === "CURSOR_MISMATCH" && (
                         <GlassPanel className="mb-4 px-3 py-2 flex items-center gap-2 text-white bg-red-600 border-red-500 animate-pulse font-bold shadow-lg shadow-red-900/50">
                             <ShieldAlert className="w-4 h-4" />
                             <span>CRITICAL: CURSOR MISMATCH</span>
@@ -48,12 +48,12 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                         <ComputedStateCard integrity={event.integrity} />
                         <StateCard
                             label="Signature"
-                            value={event.integrity.signature_state}
-                            state={event.integrity.signature_state === "VALID" ? "success" : event.integrity.signature_state === "INVALID" ? "danger" : "warning"}
+                            value={event.integrity?.signature_state || "UNKNOWN"}
+                            state={event.integrity?.signature_state === "VALID" ? "success" : event.integrity?.signature_state === "INVALID" ? "danger" : "warning"}
                         />
                     </div>
 
-                    {event.integrity.failure_reason && (
+                    {event.integrity?.failure_reason && (
                         <div className="mt-3">
                             <FailureReasonBadge reason={event.integrity.failure_reason} />
                         </div>
@@ -64,10 +64,10 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                 <section>
                     <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-3">Cryptographic Bindings</h3>
                     <div className="space-y-2">
-                        <HashRow label="Event Hash" value={event.hashes.event_hash} required />
-                        <HashRow label="Capability Hash" value={event.hashes.capability_hash} />
-                        <HashRow label="Request Hash" value={event.hashes.request_hash} />
-                        <HashRow label="Response Hash" value={event.hashes.response_hash} />
+                        <HashRow label="Event Hash" value={event.hashes?.event_hash} required />
+                        <HashRow label="Capability Hash" value={event.hashes?.capability_hash} />
+                        <HashRow label="Request Hash" value={event.hashes?.request_hash} />
+                        <HashRow label="Response Hash" value={event.hashes?.response_hash} />
                     </div>
                 </section>
 
@@ -88,11 +88,11 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                     <div className="flex items-center gap-3 p-3 rounded-lg border border-[var(--glass-border)] bg-[var(--panel)]">
                         <div className={cn(
                             "w-2 h-2 rounded-full",
-                            event.integrity.anchor_state === "ANCHORED" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-[var(--glass-border)]"
+                            event.integrity?.anchor_state === "ANCHORED" ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-[var(--glass-border)]"
                         )} />
                         <div className="flex-1">
-                            <div className="text-sm font-medium text-[var(--text-primary)]">{event.integrity.anchor_state}</div>
-                            <div className="text-xs text-[var(--text-muted)]">Verifier: {event.integrity.verifier_version}</div>
+                            <div className="text-sm font-medium text-[var(--text-primary)]">{event.integrity?.anchor_state || "UNKNOWN"}</div>
+                            <div className="text-xs text-[var(--text-muted)]">Verifier: {event.integrity?.verifier_version || "N/A"}</div>
                         </div>
                     </div>
                 </section>
@@ -249,6 +249,7 @@ function FailureReasonBadge({ reason }: { reason: string }) {
 
 
 export function computeProofBadge(integrity: AuditEvent["integrity"]): "VERIFIED" | "FAILED" | "MISSING_INPUTS" | "UNVERIFIED" {
+    if (!integrity) return "UNVERIFIED";
     const { proof_state, signature_state, anchor_state, failure_reason } = integrity;
 
     // 1. Force FAILED (Hard Crypto/Anchor Failures)

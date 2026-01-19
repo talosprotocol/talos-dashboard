@@ -2,13 +2,27 @@ import { AuditEvent } from "../schemas";
 import { deriveCursor } from "../../integrity/cursor";
 
 // Helper to generate deterministic events
-const BASE_TIME = 1700000000; // Fixed timestamp base
+const BASE_TIME = Math.floor(Date.now() / 1000) - 12 * 3600; // 12 hours ago
+
+// Valid UUIDv7 strings for testing (generated with ts in 019b... range)
+const UUID_V7 = [
+    "019bd014-e074-7fb4-9d6e-841a5150edbe",
+    "019bd014-e075-70c8-b2d3-f6fcfa1ff04b",
+    "019bd014-e075-711e-bb85-50d92717db2b",
+    "019bd014-e075-79c9-b9f6-b054e314ad28",
+    "019bd014-e075-7df5-83cf-1fc5a70294ea",
+    "019bd014-e075-7a34-b89d-9f6fa2fa9569",
+    "019bd014-e075-77da-9349-be68494a37b8",
+    "019bd014-e075-7da1-9e4e-6f7fbf0e2408",
+    "019bd014-e075-7577-aa21-c9c1fad3cd02",
+    "019bd014-e075-7a9a-8188-80b3ca5b0581",
+];
 
 const RAW_EVENTS: AuditEvent[] = [
     // --- SESSION A: Good Behavior ---
     {
         schema_version: "1",
-        event_id: "evt_001",
+        event_id: UUID_V7[0],
         timestamp: BASE_TIME - 3600,
         cursor: "", // Placeholder
         event_type: "SESSION",
@@ -30,7 +44,7 @@ const RAW_EVENTS: AuditEvent[] = [
     },
     {
         schema_version: "1",
-        event_id: "evt_002",
+        event_id: UUID_V7[1],
         timestamp: BASE_TIME - 3500,
         cursor: "",
         event_type: "AUTHORIZATION",
@@ -58,7 +72,7 @@ const RAW_EVENTS: AuditEvent[] = [
     // --- SESSION B: Suspicious Replay Attack ---
     {
         schema_version: "1",
-        event_id: "evt_003",
+        event_id: UUID_V7[2],
         timestamp: BASE_TIME - 1800,
         cursor: "",
         event_type: "AUTHORIZATION",
@@ -84,7 +98,7 @@ const RAW_EVENTS: AuditEvent[] = [
     },
     {
         schema_version: "1",
-        event_id: "evt_004", // REPLAY ATTEMPT
+        event_id: UUID_V7[3], // REPLAY ATTEMPT
         timestamp: BASE_TIME - 1799,
         cursor: "",
         event_type: "DENIAL",
@@ -113,7 +127,7 @@ const RAW_EVENTS: AuditEvent[] = [
     // --- SESSION C: Tools Not Allowed ---
     {
         schema_version: "1",
-        event_id: "evt_005",
+        event_id: UUID_V7[4],
         timestamp: BASE_TIME - 600,
         cursor: "",
         event_type: "DENIAL",
@@ -142,7 +156,7 @@ const RAW_EVENTS: AuditEvent[] = [
     // --- BURST TRAFFIC (OK) ---
     ...Array.from({ length: 20 }, (_, i) => ({
         schema_version: "1" as const,
-        event_id: `evt_burst_${i}`,
+        event_id: "019bd014-e075-7" + (100 + i).toString(16).padStart(3, '0') + "-8188-80b3ca5b0581", 
         timestamp: BASE_TIME - 60 + i,
         cursor: "",
         event_type: "AUTHORIZATION" as const,
@@ -166,7 +180,7 @@ const RAW_EVENTS: AuditEvent[] = [
     // --- Invalid Signature ---
     {
         schema_version: "1",
-        event_id: "evt_026",
+        event_id: UUID_V7[5],
         timestamp: BASE_TIME - 10,
         cursor: "",
         event_type: "DENIAL",

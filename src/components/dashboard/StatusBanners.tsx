@@ -34,8 +34,8 @@ export function StatusBanners() {
         return () => clearInterval(interval);
     }, []);
 
-    // Determine if we're in demo/test mode
-    const isDemo = mode === "MOCK" || mode === "HTTP"; // LIVE mode disables this badge
+    // Determine if we're in demo/test mode (only MOCK is demo, HTTP/WS/LIVE are production)
+    const isDemo = mode === "MOCK";
 
     return (
         <div className="flex items-center gap-3 text-xs font-mono flex-wrap">

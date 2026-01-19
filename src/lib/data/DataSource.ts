@@ -321,7 +321,8 @@ export class SqliteDataSource implements DataSource {
 
 // --- Factory ---
 
-const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "MOCK") as DataMode;
+// Default to HTTP (production mode) unless explicitly set to MOCK for development
+const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "HTTP") as DataMode;
 
 function createDataSource(mode: DataMode): DataSource {
     switch (mode) {
@@ -331,13 +332,18 @@ function createDataSource(mode: DataMode): DataSource {
         case "HTTP":
         case "LIVE": return new HttpDataSource();
         case "SQLITE": return new SqliteDataSource();
-        default: return new MockDataSource();
+        case "MOCK": return new MockDataSource();
+        default: return new HttpDataSource(); // Production default
     }
 }
 
 export const dataSource: DataSource = createDataSource(mode);
 
 if (mode === "SQLITE" && process.env.NODE_ENV !== "development") {
-    console.error("CRITICAL: Attempted to load SQLite adapter in non-dev environment. Falling back to Mock.");
-    // Force mock? The constructor throws.
+    console.error("CRITICAL: Attempted to load SQLite adapter in non-dev environment. Falling back to HTTP.");
+}
+
+// Log current mode for debugging
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    console.log(`[Talos Dashboard] Data Source Mode: ${mode}`);
 }
