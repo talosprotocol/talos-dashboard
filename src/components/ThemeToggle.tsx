@@ -11,8 +11,9 @@ export function ThemeToggle({ className }: { className?: string }) {
 
     // Avoid hydration mismatch
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setMounted(true);
+        // Use timeout to avoid synchronous set-state-in-effect warning
+        const t = setTimeout(() => setMounted(true), 0);
+        return () => clearTimeout(t);
     }, []);
 
     if (!mounted) return null;
