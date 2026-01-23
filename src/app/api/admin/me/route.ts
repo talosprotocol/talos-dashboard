@@ -34,7 +34,6 @@ export async function GET(req: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   } else {
-    console.log('[api/admin/me] Dev mode: auth bypass enabled');
   }
 
   // ---------------------------------------------
