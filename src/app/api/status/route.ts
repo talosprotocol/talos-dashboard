@@ -8,7 +8,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { DATA_SOURCE_MODE, TALOS_AUDIT_URL, TALOS_GATEWAY_URL, TALOS_CONNECTOR_URL, TALOS_CHAT_URL } from '@/lib/config';
+import { DATA_SOURCE_MODE, TALOS_AUDIT_URL as _TALOS_AUDIT_URL, TALOS_GATEWAY_URL as _TALOS_GATEWAY_URL, TALOS_CONNECTOR_URL as _TALOS_CONNECTOR_URL, TALOS_CHAT_URL as _TALOS_CHAT_URL } from '@/lib/config';
 import { MockDataSource } from '@/lib/mockData';
 import { getServerSession } from '@/lib/auth';
 
@@ -99,7 +99,7 @@ async function checkService(url: string, name: string, timeoutMs: number = 2000)
   }
 }
 
-export async function GET(req: NextRequest): Promise<Response> {
+export async function GET(_req: NextRequest): Promise<Response> {
   // Server-side mode switching
   if (DATA_SOURCE_MODE === 'MOCK') {
     const mock = new MockDataSource();

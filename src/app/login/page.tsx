@@ -4,7 +4,7 @@ import React, { useActionState } from 'react'
 import { TalosLogo } from '@/components/ui/TalosLogo'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { authenticate } from './action'
-import { Loader2, Lock, ArrowRight, Github, Chrome } from 'lucide-react'
+import { Loader2, Lock, Github, Chrome } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {

@@ -88,7 +88,7 @@ function generateUUIDv7(): string {
  */
 function computeEventHash(event: Omit<AuditEvent, 'event_hash'>): string {
   // Exclude event_hash and cursor from canonicalization
-  const { cursor, ...eventForHash } = event;
+  const { cursor: _cursor, ...eventForHash } = event;
   const canonical = JSON.stringify(eventForHash, Object.keys(eventForHash).sort(), 0);
   
   // SHA256 hash (browser-compatible)

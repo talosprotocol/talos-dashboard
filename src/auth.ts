@@ -38,7 +38,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth;
       // Protect Console and Status routes
-      const isOnDashboard = nextUrl.pathname.startsWith('/console') || nextUrl.pathname.startsWith('/status') || nextUrl.pathname === '/';
+      const isOnDashboard = nextUrl.pathname.startsWith('/console') || 
+                            nextUrl.pathname.startsWith('/status') || 
+                            nextUrl.pathname.startsWith('/admin') ||
+                            nextUrl.pathname.startsWith('/audit') ||
+                            nextUrl.pathname.startsWith('/agent') ||
+                            nextUrl.pathname === '/';
       const isAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
 
       if (isOnDashboard) {

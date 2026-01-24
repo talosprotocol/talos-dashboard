@@ -34,8 +34,9 @@ export default function SecretsPage() {
         try {
             await dataSource.deleteSecret(name);
             setSecrets(secrets.filter(s => s.name !== name));
-        } catch (err: any) {
-            alert("Failed to delete: " + err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Unknown error";
+            alert("Failed to delete: " + message);
         }
     };
 
@@ -48,8 +49,9 @@ export default function SecretsPage() {
             setNewValue("");
             setShowAdd(false);
             load();
-        } catch (err: any) {
-            alert("Failed to create: " + err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Unknown error";
+            alert("Failed to create: " + message);
         } finally {
             setCreating(false);
         }

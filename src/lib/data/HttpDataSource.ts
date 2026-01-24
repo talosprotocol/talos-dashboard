@@ -34,7 +34,9 @@ const BACKFILL_MAX_EVENTS = 1000;
 const BACKFILL_PAGE_SIZE = 100;
 
 export class HttpDataSource implements DataSource {
-    private readonly baseUrl = process.env.NEXT_PUBLIC_TALOS_GATEWAY_URL || "http://localhost:8000";
+    // Base URL is irrelevant for proxy-based calls, but kept for legacy or weird paths
+    private readonly baseUrl = "/api"; 
+
 
     protected events: AuditEvent[] = []; 
 
@@ -47,7 +49,7 @@ export class HttpDataSource implements DataSource {
     }
 
     async getMe(): Promise<UserProfile> {
-        const res = await fetch(`${this.baseUrl}/admin/v1/me`);
+        const res = await fetch("/api/admin/me");
         if (!res.ok) throw new Error("Failed to fetch user profile");
         return res.json();
     }
@@ -198,10 +200,13 @@ export class HttpDataSource implements DataSource {
     }
 
     async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-        const res = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+        const res = await fetch("/api/agent/chat", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                // Authorization is handled by the proxy (session cookie) usually, 
+                // but if the API expects Bearer from client, we keep it. 
+                // Checks user D1: "/api/agent/chat"
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify(body)
@@ -215,14 +220,14 @@ export class HttpDataSource implements DataSource {
 
     // Secrets Management
     async listSecrets(): Promise<Secret[]> {
-        const res = await fetch(`${this.baseUrl}/admin/v1/secrets`);
+        const res = await fetch("/api/admin/secrets");
         if (!res.ok) throw new Error("Failed to list secrets");
         const data = await res.json();
         return data.secrets;
     }
 
     async createSecret(name: string, value: string): Promise<void> {
-        const res = await fetch(`${this.baseUrl}/admin/v1/secrets`, {
+        const res = await fetch("/api/admin/secrets", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, value })
@@ -231,7 +236,7 @@ export class HttpDataSource implements DataSource {
     }
 
     async deleteSecret(name: string): Promise<void> {
-        const res = await fetch(`${this.baseUrl}/admin/v1/secrets/${name}`, {
+        const res = await fetch(`/api/admin/secrets?name=${encodeURIComponent(name)}`, {
             method: "DELETE"
         });
         if (!res.ok) throw new Error("Failed to delete secret");
@@ -246,7 +251,7 @@ export class HttpDataSource implements DataSource {
             latency_avg_ms: number; 
         } | null = null;
         try {
-            const res = await fetch(`${this.baseUrl}/admin/v1/telemetry/stats?window_hours=24`);
+            const res = await fetch(`${this.baseUrl}/admin/telemetry/stats?window_hours=24`);
             if (res.ok) usageStats = await res.json();
         } catch (e) {
             console.error("Failed to fetch usage stats", e);
@@ -255,7 +260,7 @@ export class HttpDataSource implements DataSource {
         // 2. Fetch real audit stats (denials, volume series)
         let auditStats: DashboardStats | null = null;
         try {
-            const res = await fetch(`${this.baseUrl}/admin/v1/audit/stats?window_hours=24`);
+            const res = await fetch(`${this.baseUrl}/admin/audit/stats?window_hours=24`);
             if (res.ok) auditStats = await res.json();
         } catch (e) {
             console.error("Failed to fetch audit stats", e);

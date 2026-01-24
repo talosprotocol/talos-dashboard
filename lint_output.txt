@@ -1,0 +1,65 @@
+
+> dashboard@0.1.27 lint
+> eslint . --ext .ts,.tsx,.js,.jsx
+
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/(shell)/admin/secrets/page.tsx
+  37:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/chat/health/route.ts
+  12:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/chat/send/route.ts
+   62:14  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+  107:14  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/chat/stats/route.ts
+  12:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/chat/summary/route.ts
+  12:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/devops/health/route.ts
+  15:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/devops/status/route.ts
+  12:27  warning  '_req' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/examples/devops/trigger/route.ts
+  48:14  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+  74:14  warning  '_e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/gateway/status/route.ts
+  7:27  warning  '_request' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/api/status/route.ts
+   11:28  warning  'TALOS_AUDIT_URL' is defined but never used      @typescript-eslint/no-unused-vars
+   11:45  warning  'TALOS_GATEWAY_URL' is defined but never used    @typescript-eslint/no-unused-vars
+   11:64  warning  'TALOS_CONNECTOR_URL' is defined but never used  @typescript-eslint/no-unused-vars
+   11:85  warning  'TALOS_CHAT_URL' is defined but never used       @typescript-eslint/no-unused-vars
+  102:27  warning  'req' is defined but never used                  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/app/login/page.tsx
+  7:25  warning  'ArrowRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/lib/data/DataSource.ts
+   96:26  warning  '_id' is defined but never used      @typescript-eslint/no-unused-vars
+  107:28  warning  '_id' is defined but never used      @typescript-eslint/no-unused-vars
+  119:27  warning  '_id' is defined but never used      @typescript-eslint/no-unused-vars
+  121:27  warning  '_teamId' is defined but never used  @typescript-eslint/no-unused-vars
+  127:27  warning  '_id' is defined but never used      @typescript-eslint/no-unused-vars
+  136:24  warning  '_name' is defined but never used    @typescript-eslint/no-unused-vars
+  136:39  warning  '_value' is defined but never used   @typescript-eslint/no-unused-vars
+  137:24  warning  '_name' is defined but never used    @typescript-eslint/no-unused-vars
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/lib/hooks/useAuditSSE.ts
+    8:29  warning  'useCallback' is defined but never used                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   43:9   warning  'connectionState' is assigned a value but never used                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  115:6   warning  React Hook useEffect has a missing dependency: 'onConnectionChange'. Either include it or remove the dependency array. If 'onConnectionChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+/Users/nileshchakraborty/workspace/study/blockchain-mcp-security/site/dashboard/src/lib/mockData.ts
+  91:11  warning  'cursor' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 30 problems (2 errors, 28 warnings)
+

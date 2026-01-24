@@ -5,7 +5,7 @@
  * Handles reconnection, auth failures, and event filtering.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import type { AuditEvent } from '@/lib/data/schemas';
 import type { AuditFilters } from '@/lib/data/DataSourceTypes';
 import type { AuditAction, ConnectionState } from './useAuditState';
@@ -30,22 +30,21 @@ function matchesFilters(event: AuditEvent, filters: AuditFilters): boolean {
 export function useAuditSSE({ filters, dispatch, onConnectionChange }: UseAuditSSEOptions) {
   const filtersRef = useRef(filters);
   const dispatchRef = useRef(dispatch);
+  const onConnectionChangeRef = useRef(onConnectionChange);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Keep refs updated
   useEffect(() => {
     filtersRef.current = filters;
     dispatchRef.current = dispatch;
+    onConnectionChangeRef.current = onConnectionChange;
   });
 
   useEffect(() => {
     let es: EventSource | null = null;
-    let connectionState: ConnectionState = 'disconnected';
-
     const updateConnectionState = (newState: ConnectionState) => {
-      connectionState = newState;
       dispatchRef.current({ type: 'SSE_CONNECTION_STATE_CHANGED', state: newState });
-      onConnectionChange?.(newState);
+      onConnectionChangeRef.current?.(newState);
     };
 
     const connect = () => {
