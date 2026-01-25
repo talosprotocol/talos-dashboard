@@ -147,9 +147,15 @@ function AuditPageContent() {
                         )}
                     </GlassPanel>
                     
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 text-green-500 text-sm font-medium border border-green-500/20">
-                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                        Mock Mode
+                    <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${
+                        process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' 
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                            : 'bg-green-500/10 text-green-500 border-green-500/20'
+                    }`}>
+                        <span className={`h-2 w-2 rounded-full ${
+                            process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' ? 'bg-amber-500' : 'bg-green-500'
+                        } animate-pulse`} />
+                        {process.env.NEXT_PUBLIC_TALOS_DATA_MODE || 'HTTP'} Mode
                     </span>
                 </div>
             </div>

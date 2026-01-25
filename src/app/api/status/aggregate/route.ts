@@ -45,7 +45,7 @@ const SERVICES = [
   {
     name: "gateway",
     url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
-    endpoint: "/health/live",
+    endpoint: "/healthz",
   },
   {
     name: "audit",
@@ -59,9 +59,13 @@ const SERVICES = [
   },
   {
     name: "ollama",
-    // Use Gateway URL for proxy check
     url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
     endpoint: "/health/ollama",
+  },
+  {
+    name: "governance",
+    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
+    endpoint: "/health/tga",
   },
 ];
 

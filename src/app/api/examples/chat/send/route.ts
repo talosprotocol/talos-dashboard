@@ -3,9 +3,9 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 60000;
 const MAX_BODY = 64 * 1024; // 64KB
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://127.0.0.1:8100";
+const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8090";
 
 // --- Schema Validation ---
 
