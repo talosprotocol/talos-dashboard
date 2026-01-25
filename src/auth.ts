@@ -43,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                             nextUrl.pathname.startsWith('/admin') ||
                             nextUrl.pathname.startsWith('/audit') ||
                             nextUrl.pathname.startsWith('/agent') ||
+                            nextUrl.pathname.startsWith('/configuration') ||
                             nextUrl.pathname === '/';
       const isAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
 

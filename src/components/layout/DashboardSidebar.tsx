@@ -27,6 +27,11 @@ const navItems = [
     icon: Settings,
   },
   {
+    title: 'Configuration',
+    href: '/configuration',
+    icon: Settings, // Reusing Settings for now, or import Sliders
+  },
+  {
     title: 'Docs',
     href: '/docs',
     icon: FileText,
