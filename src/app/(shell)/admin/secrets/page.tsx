@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, Secret } from "@/lib/data/DataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Plus, Trash2, Key, Search, ShieldCheck } from "lucide-react";
@@ -11,6 +12,7 @@ export default function SecretsPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [showAdd, setShowAdd] = useState(false);
+    const { toast } = useToast();
     
     const [newName, setNewName] = useState("");
     const [newValue, setNewValue] = useState("");
@@ -36,7 +38,11 @@ export default function SecretsPage() {
             setSecrets(secrets.filter(s => s.name !== name));
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Unknown error";
-            alert("Failed to delete: " + message);
+            toast({
+                title: "Exclusion Registry Error",
+                description: `Failed to remove secret: ${message}`,
+                variant: "destructive"
+            });
         }
     };
 
@@ -51,7 +57,11 @@ export default function SecretsPage() {
             load();
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Unknown error";
-            alert("Failed to create: " + message);
+            toast({
+                title: "Registry Ingestion Error",
+                description: `Failed to create secret: ${message}`,
+                variant: "destructive"
+            });
         } finally {
             setCreating(false);
         }

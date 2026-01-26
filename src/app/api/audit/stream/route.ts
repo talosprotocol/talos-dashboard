@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/auth";
+import { validateRequest } from "@/lib/auth/session";
 // import { getServerSession } from "next-auth"; // Uncomment when auth is configured
 
 export const dynamic = "force-dynamic";
@@ -31,8 +31,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
   
   if (!isDevMode) {
-    const session = await getServerSession();
-    if (!session || !session.user) {
+    const sessionData = await validateRequest();
+    if (!sessionData) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }

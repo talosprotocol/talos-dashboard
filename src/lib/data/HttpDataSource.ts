@@ -1,6 +1,6 @@
 import { AuditEvent, CursorPage, GatewayStatus } from "./schemas";
 import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret } from "./DataSourceTypes";
-import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
+import { checkCursorContinuity, type CursorGap } from "@talos-protocol/contracts";
 import { validateCursor } from "../integrity/cursor";
 
 // --- Integrity & Backfill State ---
@@ -370,16 +370,25 @@ export class HttpDataSource implements DataSource {
             }
         });
 
-        es.onerror = (e) => {
-            console.error("[AuditStream] Connection error, checking session...", e);
-            // Verify session is still valid (per spec)
-            fetch("/api/auth/session").then(res => {
-                if (res.status === 401 || res.status === 403) {
-                    console.error("[AuditStream] Session invalid, redirecting to login");
-                    window.location.href = "/login"; // Or appropriate auth redirect
-                    es.close();
-                }
-            }).catch(() => {}); // If auth check fails, let SSE retry
+        es.onerror = (_e) => {
+            // SSE connection errors happen normally (e.g. server restart, network glitch)
+            // We only alert if the session is actually invalid.
+            fetch("/api/auth/session")
+                .then(res => {
+                    if (res.status === 401 || res.status === 403) {
+                        console.error("[AuditStream] Session invalid, redirecting to login");
+                        window.location.href = "/login";
+                        es.close();
+                    } else if (!res.ok) {
+                        console.warn("[AuditStream] Connection issue, session check failed with status:", res.status);
+                    } else {
+                        // Session is OK, EventSource will automatically retry
+                        console.log("[AuditStream] Connection lost, retrying...");
+                    }
+                })
+                .catch(() => {
+                    // Network error during session check, let SSE retry silently
+                });
         };
 
         return () => es.close();

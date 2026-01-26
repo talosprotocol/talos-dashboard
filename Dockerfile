@@ -42,14 +42,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY site/dashboard/ .
 
 # Re-install contracts package (copy built package into node_modules)
-RUN rm -rf node_modules/@talosprotocol/contracts && \
-    mkdir -p node_modules/@talosprotocol/contracts && \
-    cp -r /contracts/typescript/package.json node_modules/@talosprotocol/contracts/ && \
-    cp -r /contracts/typescript/dist node_modules/@talosprotocol/contracts/
+RUN rm -rf node_modules/@talos-protocol/contracts && \
+    mkdir -p node_modules/@talos-protocol/contracts && \
+    cp -r /contracts/typescript/package.json node_modules/@talos-protocol/contracts/ && \
+    cp -r /contracts/typescript/dist node_modules/@talos-protocol/contracts/
 
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
+# Remove local path aliases from tsconfig.json to ensure we use the installed node_module
+RUN node scripts/clean-tsconfig.js
 
 # Build with standalone output
 RUN npm run build

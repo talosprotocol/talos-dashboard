@@ -26,13 +26,19 @@ export default function ConsolePage() {
         <div className="space-y-8">
             {/* Status and Quick Actions */}
             <div className="flex items-center justify-between">
-                <StatusBanners />
-                <Link
-                    href="/examples/chat"
-                    className="px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-lg text-sm font-semibold hover:bg-[var(--accent)]/10 transition-all shadow-sm shadow-[var(--accent-glow)]"
-                >
-                    Secure Chat
-                </Link>
+                <div>
+                     <h1 className="text-2xl font-bold tracking-tight mb-1">Mission Control</h1>
+                     <p className="text-sm text-[var(--text-muted)]">Real-time security analytics and enforcement.</p>
+                </div>
+                <div className="flex gap-3">
+                    <StatusBanners />
+                    <Link
+                        href="/examples/chat"
+                        className="px-4 py-2 border border-[var(--accent)] text-[var(--accent)] rounded-lg text-sm font-semibold hover:bg-[var(--accent)]/10 transition-all shadow-sm shadow-[var(--accent-glow)]"
+                    >
+                        Secure Chat
+                    </Link>
+                </div>
             </div>
 
             {/* Content */}

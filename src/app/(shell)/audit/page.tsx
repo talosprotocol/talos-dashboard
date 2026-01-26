@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, Suspense, useMemo } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { AuditTable } from "@/components/dashboard/AuditTable";
 import { AuditFilters } from "@/lib/data/DataSourceTypes";
 import { ListFilter } from "lucide-react";
@@ -9,14 +10,16 @@ import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { AuditFiltersPanel } from "@/components/dashboard/AuditFiltersPanel";
 import { CursorMismatchBanner } from "@/components/dashboard/CursorMismatchBanner";
 import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
-import { RedactionLevel } from "@talosprotocol/contracts";
+import { RedactionLevel } from "@talos-protocol/contracts";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuditState, selectOrderedEvents, selectInvalidEvents, selectCanFetchMore } from "@/lib/hooks/useAuditState";
 import { useAuditSSE } from "@/lib/hooks/useAuditSSE";
+import { motion } from "framer-motion";
 
 function AuditPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { toast } = useToast();
 
     // Parse filters from URL
     const filters: AuditFilters = useMemo(() => {
@@ -96,11 +99,15 @@ function AuditPageContent() {
             setSelectedIds(new Set());
         } catch (e) {
             console.error("Export failed", e);
-            alert("Export failed: " + (e instanceof Error ? e.message : String(e)));
+            toast({
+                title: "Export Failure",
+                description: `Operation aborted: ${e instanceof Error ? e.message : String(e)}`,
+                variant: "destructive"
+            });
         } finally {
             setIsExporting(false);
         }
-    }, [selectedIds, orderedEvents, filters]);
+    }, [selectedIds, orderedEvents, filters, toast]);
 
     // Compute outcome counts for export
     const outcomeCounts = useMemo(() => {
@@ -115,48 +122,54 @@ function AuditPageContent() {
     }, [orderedEvents, selectedIds]);
 
     return (
-        <div className="space-y-6">
+        <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+        >
             {/* Page Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 py-2">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Audit Explorer</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Monitor and analyze security audit events in real-time
+                    <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
+                        Audit <span className="text-indigo-400">Explorer</span>
+                    </h1>
+                    <p className="text-slate-400 text-sm font-medium max-w-2xl">
+                        Monitor and analyze security audit events across the protocol in real-time.
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setShowExport(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-xl transition-all duration-300"
                     >
-                        <ListFilter className="h-4 w-4 rotate-180" />
+                        <ListFilter className="h-3.5 w-3.5 rotate-180" />
                         Export
                     </button>
 
                     <GlassPanel
                         variant="hoverable"
-                        className={`px-4 py-2 flex items-center gap-2 text-sm cursor-pointer ${showFilters ? 'text-primary border-primary' : ''}`}
+                        className={`px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer transition-all duration-300 ${showFilters ? 'text-indigo-400 border-indigo-500/50 bg-indigo-500/5 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'text-slate-400 border-white/5'}`}
                         onClick={() => setShowFilters(!showFilters)}
                     >
-                        <ListFilter className="h-4 w-4" />
+                        <ListFilter className="h-3.5 w-3.5" />
                         <span>Filters</span>
                         {Object.keys(filters).length > 0 && (
-                            <span className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                            <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white text-[9px] font-bold">
                                 {Object.keys(filters).length}
                             </span>
                         )}
                     </GlassPanel>
                     
-                    <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${
+                    <GlassPanel className={`px-4 py-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border-white/5 shadow-2xl ${
                         process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' 
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
-                            : 'bg-green-500/10 text-green-500 border-green-500/20'
+                            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' 
+                            : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
                     }`}>
-                        <span className={`h-2 w-2 rounded-full ${
-                            process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' ? 'bg-amber-500' : 'bg-green-500'
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                            process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' ? 'bg-amber-500' : 'bg-emerald-500'
                         } animate-pulse`} />
                         {process.env.NEXT_PUBLIC_TALOS_DATA_MODE || 'HTTP'} Mode
-                    </span>
+                    </GlassPanel>
                 </div>
             </div>
 
@@ -214,7 +227,7 @@ function AuditPageContent() {
                 onExport={handleExport}
                 outcomeCounts={outcomeCounts}
             />
-        </div>
+        </motion.div>
     );
 }
 

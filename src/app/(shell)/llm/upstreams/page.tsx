@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, Upstream } from "@/lib/data/DataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Plus, Trash2, Power, Globe, Tag, Edit2 } from "lucide-react";
@@ -12,6 +13,7 @@ export default function UpstreamsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Upstream | null>(null);
     const [saving, setSaving] = useState(false);
+    const { toast } = useToast();
 
     // Form state
     const [formData, setFormData] = useState<Partial<Upstream>>({
@@ -60,7 +62,11 @@ export default function UpstreamsPage() {
             setShowModal(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            alert("Failed to save: " + msg);
+            toast({
+                title: "Inbound Interface Error",
+                description: `Failed to save upstream: ${msg}`,
+                variant: "destructive"
+            });
         } finally {
             setSaving(false);
         }
@@ -76,7 +82,11 @@ export default function UpstreamsPage() {
             if (msg.includes("DEPENDENCY_EXISTS") || msg.includes("dependent")) {
                 msg = "Cannot delete upstream: It is currently being used by one or more Model Groups. Please remove those deployments first.";
             }
-            alert(msg);
+            toast({
+                title: "Teardown Conflict",
+                description: msg,
+                variant: "destructive"
+            });
         }
     };
 

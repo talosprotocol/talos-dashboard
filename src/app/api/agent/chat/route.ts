@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/auth";
+import { validateRequest } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,8 +8,8 @@ const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8090";
 
 export async function POST(req: NextRequest) {
     // 1. Auth Check
-    const session = await getServerSession();
-    if (!session || !session.user) return new Response("Unauthorized", { status: 401 });
+    const sessionData = await validateRequest();
+    if (!sessionData) return new Response("Unauthorized", { status: 401 });
 
     // 2. Limits Check
     const contentLength = parseInt(req.headers.get("content-length") || "0");
@@ -38,10 +38,8 @@ export async function POST(req: NextRequest) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                // @ts-expect-error - session type
-                "Authorization": `Bearer ${session.accessToken}`,
-                // @ts-expect-error - session type
-                "X-Talos-Principal": session.principalId
+                "Authorization": `Bearer ${sessionData.user.id}`, // Placeholder until access tokens
+                "X-Talos-Principal": sessionData.user.id
             },
             body: JSON.stringify(body),
             signal: req.signal, 

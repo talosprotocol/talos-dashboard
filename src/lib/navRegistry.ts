@@ -75,6 +75,13 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "core",
         parent: null,
     },
+    "/configuration": {
+        label: "Configuration",
+        icon: "⚙️",
+        ariaLabel: "Talos Configuration Control Plane",
+        group: "core",
+        parent: null,
+    },
     "/admin/secrets": {
         label: "Secrets",
         icon: "🔐",

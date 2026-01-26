@@ -4,7 +4,7 @@ export function DashboardFooter() {
   const isMockMode = dataMode === 'MOCK';
   
   return (
-    <footer className="fixed bottom-0 left-0 right-0 h-12 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30">
+    <footer className="fixed bottom-0 left-0 right-0 h-12 border-t border-white/5 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 z-30">
       <div className="h-full flex items-center justify-end px-6 w-full text-xs text-muted-foreground">
         {/* Right Corner: Copyright, License, Version, Mode */}
         <div className="flex items-center gap-4">

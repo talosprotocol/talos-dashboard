@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, McpServer } from "@/lib/data/DataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Plus, Trash2, Power, Terminal, Edit2 } from "lucide-react";
@@ -12,6 +13,7 @@ export default function McpServersPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<McpServer | null>(null);
     const [saving, setSaving] = useState(false);
+    const { toast } = useToast();
 
     // Form state
     const [formData, setFormData] = useState<Partial<McpServer>>({
@@ -56,7 +58,11 @@ export default function McpServersPage() {
             setShowModal(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            alert("Failed to save: " + msg);
+            toast({
+                title: "Registry Sync Failure",
+                description: `Failed to save MCP server: ${msg}`,
+                variant: "destructive"
+            });
         } finally {
             setSaving(false);
         }
@@ -68,7 +74,11 @@ export default function McpServersPage() {
             await dataSource.deleteMcpServer(id);
             setServers(prev => prev.filter(s => s.id !== id));
         } catch (err) {
-            alert("Failed to delete: " + err);
+            toast({
+                title: "Decommissioning Failure",
+                description: `Failed to delete MCP server: ${err}`,
+                variant: "destructive"
+            });
         }
     };
 

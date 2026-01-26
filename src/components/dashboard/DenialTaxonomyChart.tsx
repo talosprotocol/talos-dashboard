@@ -9,18 +9,18 @@ interface DenialTaxonomyChartProps {
 
 // Color palette for denial reasons
 const COLORS: Record<string, string> = {
-    NO_CAPABILITY: "#ef4444",      // red
-    EXPIRED: "#f97316",            // orange  
-    REVOKED: "#eab308",            // yellow
-    SCOPE_MISMATCH: "#22c55e",     // green
-    DELEGATION_INVALID: "#06b6d4", // cyan
-    UNKNOWN_TOOL: "#3b82f6",       // blue
-    REPLAY: "#8b5cf6",             // purple
-    SIGNATURE_INVALID: "#ec4899",  // pink
-    INVALID_FRAME: "#6366f1",      // indigo
+    NO_CAPABILITY: "#ef4444",      // rose-500
+    EXPIRED: "#f59e0b",            // amber-500  
+    REVOKED: "#ea39b8",            // pink-500
+    SCOPE_MISMATCH: "#10b981",     // emerald-500
+    DELEGATION_INVALID: "#06b6d4", // cyan-500
+    UNKNOWN_TOOL: "#3b82f6",       // blue-500
+    REPLAY: "#8b5cf6",             // violet-500
+    SIGNATURE_INVALID: "#6366f1",  // indigo-500
+    INVALID_FRAME: "#475569",      // slate-500
 };
 
-const DEFAULT_COLOR = "#64748b"; // slate
+const DEFAULT_COLOR = "#334155"; // slate-700
 
 // Human-readable labels
 const LABELS: Record<string, string> = {
@@ -49,9 +49,9 @@ export function DenialTaxonomyChart({ data }: DenialTaxonomyChartProps) {
 
     if (total === 0) {
         return (
-            <GlassPanel className="p-4 h-64">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-4">Denial Taxonomy</h3>
-                <div className="flex items-center justify-center h-48 text-[var(--text-muted)] text-sm">
+            <GlassPanel className="p-4 h-64 border-white/5">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4 px-1">Denial Taxonomy</h3>
+                <div className="flex items-center justify-center h-48 text-slate-500 text-sm font-medium italic">
                     No denials recorded
                 </div>
             </GlassPanel>
@@ -59,49 +59,57 @@ export function DenialTaxonomyChart({ data }: DenialTaxonomyChartProps) {
     }
 
     return (
-        <GlassPanel className="p-4 h-64">
-            <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Denial Taxonomy</h3>
+        <GlassPanel className="p-4 h-64 border-white/5 shadow-2xl">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">Denial Taxonomy</h3>
             <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                     <Pie
                         data={chartData}
-                        cx="50%"
+                        cx="45%"
                         cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        paddingAngle={2}
+                        innerRadius={50}
+                        outerRadius={75}
+                        paddingAngle={4}
                         dataKey="value"
-                        stroke="none"
+                        stroke="rgba(255,255,255,0.05)"
+                        strokeWidth={2}
+                        animationBegin={200}
+                        animationDuration={1200}
                     >
                         {chartData.map((entry) => (
                             <Cell
                                 key={entry.reason}
                                 fill={COLORS[entry.reason] || DEFAULT_COLOR}
-                                className="transition-opacity hover:opacity-80"
+                                className="transition-all duration-300 hover:scale-105"
+                                style={{ outline: 'none' }}
                             />
                         ))}
                     </Pie>
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: "var(--panel)",
-                            border: "1px solid var(--glass-border)",
-                            borderRadius: "8px",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                            backgroundColor: "rgba(2, 6, 23, 0.8)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius: "12px",
+                            backdropFilter: "blur(12px)",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                            fontSize: "12px",
+                            padding: "8px 12px"
                         }}
-                        labelStyle={{ color: "var(--text-primary)" }}
-                        itemStyle={{ color: "var(--text-secondary)" }}
+                        itemStyle={{ color: "#fff" }}
                         formatter={(value: number | undefined, name: string | undefined) => [
-                            `${value ?? 0} (${(((value ?? 0) / total) * 100).toFixed(1)}%)`,
-                            name ?? "",
+                            <span key="val" className="font-bold text-white">{value ?? 0} <span key="pct" className="text-[10px] text-slate-400 font-normal">({(((value ?? 0) / total) * 100).toFixed(1)}%)</span></span>,
+                            <span key="name" className="text-slate-300 mr-2">{name}</span>
                         ]}
                     />
                     <Legend
                         layout="vertical"
                         align="right"
                         verticalAlign="middle"
-                        wrapperStyle={{ fontSize: "11px", color: "var(--text-muted)" }}
+                        iconType="circle"
+                        iconSize={8}
+                        wrapperStyle={{ fontSize: "10px", fontWeight: "600", letterSpacing: "0.025em" }}
                         formatter={(value) => (
-                            <span style={{ color: "var(--text-secondary)" }}>{value}</span>
+                            <span className="text-slate-400 uppercase ml-1 opacity-80">{value}</span>
                         )}
                     />
                 </PieChart>

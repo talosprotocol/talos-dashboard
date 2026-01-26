@@ -4,6 +4,7 @@ import { useDataSource } from "@/lib/hooks/useDataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { SessionTimeline } from "@/components/dashboard/SessionTimeline";
 import { useMemo, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { computeSuspiciousScore } from "@/lib/analysis/scoring";
@@ -13,6 +14,7 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
     const { events } = useDataSource();
     const sessionId = params.id;
     const [isExporting, setIsExporting] = useState(false);
+    const { toast } = useToast();
 
     const sessionEvents = useMemo(() => {
         // Desc order by default in mock
@@ -35,7 +37,11 @@ export default function SessionDetailPage({ params }: { params: { id: string } }
             });
         } catch (e) {
             console.error("Session export failed", e);
-            alert("Export failed: " + e);
+            toast({
+                title: "Evidence Extraction Failure",
+                description: `Failed to export session data: ${e instanceof Error ? e.message : String(e)}`,
+                variant: "destructive"
+            });
         } finally {
             setIsExporting(false);
         }

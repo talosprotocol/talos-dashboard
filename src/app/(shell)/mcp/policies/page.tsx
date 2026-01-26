@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, McpPolicy } from "@/lib/data/DataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Plus, Trash2, ShieldCheck, Users, Box, Edit2 } from "lucide-react";
@@ -12,6 +13,7 @@ export default function McpPoliciesPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<McpPolicy | null>(null);
     const [saving, setSaving] = useState(false);
+    const { toast } = useToast();
 
     // Form state
     const [formData, setFormData] = useState<Partial<McpPolicy>>({
@@ -55,7 +57,11 @@ export default function McpPoliciesPage() {
             setShowModal(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            alert("Failed to save: " + msg);
+            toast({
+                title: "Policy Enforcement Error",
+                description: `Failed to save MCP policy: ${msg}`,
+                variant: "destructive"
+            });
         } finally {
             setSaving(false);
         }
@@ -67,7 +73,11 @@ export default function McpPoliciesPage() {
             await dataSource.deleteMcpPolicy(id);
             setPolicies(prev => prev.filter(p => p.id !== id));
         } catch (err) {
-            alert("Failed to delete: " + err);
+            toast({
+                title: "Policy Revocation Error",
+                description: `Failed to delete policy: ${err}`,
+                variant: "destructive"
+            });
         }
     };
 

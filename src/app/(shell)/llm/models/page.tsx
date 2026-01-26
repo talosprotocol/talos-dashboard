@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, ModelGroup } from "@/lib/data/DataSource";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Plus, Trash2, Power, Layers, Zap, Edit2 } from "lucide-react";
@@ -12,6 +13,7 @@ export default function ModelGroupsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<ModelGroup | null>(null);
     const [saving, setSaving] = useState(false);
+    const { toast } = useToast();
 
     // Form state
     const [formData, setFormData] = useState<Partial<ModelGroup>>({
@@ -56,7 +58,11 @@ export default function ModelGroupsPage() {
             setShowModal(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            alert("Failed to save: " + msg);
+            toast({
+                title: "Inference Stack Error",
+                description: `Failed to save model group: ${msg}`,
+                variant: "destructive"
+            });
         } finally {
             setSaving(false);
         }
@@ -68,7 +74,11 @@ export default function ModelGroupsPage() {
             await dataSource.deleteModelGroup(id);
             setGroups(prev => prev.filter(g => g.id !== id));
         } catch (err) {
-            alert("Failed to delete: " + err);
+            toast({
+                title: "Orchestration Failure",
+                description: `Failed to delete model group: ${err}`,
+                variant: "destructive"
+            });
         }
     };
 

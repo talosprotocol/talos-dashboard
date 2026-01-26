@@ -11,7 +11,7 @@ import {
     IntegrityStatus,
     BackfillStatus
 } from "@/lib/data/DataSource";
-import { CursorGap } from "@talosprotocol/contracts";
+import { CursorGap } from "@talos-protocol/contracts";
 import { useEffect, useState } from "react";
 
 export function StatusBanners() {
@@ -34,14 +34,13 @@ export function StatusBanners() {
         return () => clearInterval(interval);
     }, []);
 
-    // Determine if we're in demo/test mode (only MOCK is demo, HTTP/WS/LIVE are production)
-    const isDemo = mode === "MOCK";
+
 
     return (
-        <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
+        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest flex-wrap">
             {/* --- CRITICAL INTEGRITY BANNER --- */}
             {integrity === "CURSOR_MISMATCH" && (
-                <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-white bg-red-600 border-red-500 animate-pulse font-bold shadow-lg shadow-red-900/50">
+                <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-white bg-red-600 border-red-500 animate-pulse shadow-lg shadow-red-900/50">
                     <ShieldAlert className="w-4 h-4" />
                     <span>INTEGRITY FAILURE: Cursor mismatch detected. Event log may be tampered.</span>
                 </GlassPanel>
@@ -60,17 +59,16 @@ export function StatusBanners() {
                     <AlertTriangle className="w-3 h-3" />
                     {gaps.length > 0 ? (
                         <span>
-                            Gap Detected: <span className="font-mono text-[10px] bg-black/20 px-1 rounded">{gaps[0].from_cursor.slice(0, 8)}...</span>
-                            to <span className="font-mono text-[10px] bg-black/20 px-1 rounded">{gaps[0].to_cursor.slice(0, 8)}...</span>
+                            Gap: <span className="font-mono text-[9px] bg-black/20 px-1 rounded">{gaps[0].from_cursor.slice(0, 8)}...</span>
                         </span>
                     ) : (
-                        <span>History Gap: Partial Data</span>
+                        <span>History Gap: Partial</span>
                     )}
 
                     {backfill === "FAILED" && retryInfo.retries < retryInfo.max && (
                         <button
                             onClick={retryBackfill}
-                            className="ml-2 text-[10px] uppercase font-bold text-amber-500 hover:text-amber-300 underline"
+                            className="ml-2 text-[9px] uppercase font-bold text-amber-500 hover:text-amber-300 underline"
                         >
                             Retry ({retryInfo.max - retryInfo.retries})
                         </button>
@@ -79,10 +77,10 @@ export function StatusBanners() {
             )}
 
             {/* Data Mode Pill */}
-            <GlassPanel className={`px-3 py-1.5 flex items-center gap-2 ${mode === "WS" || mode === "LIVE"
+            <GlassPanel className={`px-3 py-1.5 flex items-center gap-2 border-white/5 ${mode === "WS" || mode === "LIVE"
                 ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
                 : mode === "HTTP"
-                    ? "text-blue-400 bg-blue-500/10 border-blue-500/30"
+                    ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/30"
                     : "text-amber-400 bg-amber-500/10 border-amber-500/30"
                 }`}>
                 {mode === "WS" ? (
@@ -97,26 +95,11 @@ export function StatusBanners() {
                 </span>
             </GlassPanel>
 
-            {/* Demo Banner - shown when using generated traffic */}
-            {isDemo && (
-                <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-purple-400 bg-purple-500/10 border-purple-500/30">
-                    <FlaskConical className="w-3 h-3" />
-                    <span>DEMO TRAFFIC</span>
-                </GlassPanel>
-            )}
-
             {/* Redaction Policy */}
-            <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-[var(--text-muted)] bg-[var(--glass-border)]/50">
-                <Lock className="w-3 h-3" />
-                <span>REDACTION: {allowSafeMetadata ? "SAFE_METADATA" : "STRICT_HASH_ONLY"}</span>
+            <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-slate-400 bg-white/[0.03] border-white/5">
+                <Lock className="w-3 h-3 opacity-60" />
+                <span>REDACTION: {allowSafeMetadata ? "SAFE" : "STRICT"}</span>
             </GlassPanel>
-
-            {allowSafeMetadata && (
-                <GlassPanel className="px-3 py-1.5 flex items-center gap-2 text-amber-500 bg-amber-500/10 border-amber-500/20">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>NON-PROD METADATA</span>
-                </GlassPanel>
-            )}
         </div>
     );
 }

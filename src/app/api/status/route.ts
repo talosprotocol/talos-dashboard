@@ -10,7 +10,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { DATA_SOURCE_MODE, TALOS_AUDIT_URL as _TALOS_AUDIT_URL, TALOS_GATEWAY_URL as _TALOS_GATEWAY_URL, TALOS_CONNECTOR_URL as _TALOS_CONNECTOR_URL, TALOS_CHAT_URL as _TALOS_CHAT_URL } from '@/lib/config';
 import { MockDataSource } from '@/lib/mockData';
-import { getServerSession } from '@/lib/auth';
+import { validateRequest } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -115,8 +115,8 @@ export async function GET(_req: NextRequest): Promise<Response> {
   const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
   
   if (!isDevMode) {
-    const session = await getServerSession();
-    if (!session || !session.user) {
+    const sessionData = await validateRequest();
+    if (!sessionData) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

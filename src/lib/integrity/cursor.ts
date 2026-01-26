@@ -1,11 +1,11 @@
-// Thin re-export from @talosprotocol/contracts
+// Thin re-export from @talos-protocol/contracts
 // All cursor logic is owned by contracts, dashboard orchestrates only
 
 export type {
     CursorValidationReason,
     CursorValidationResult,
     DecodedCursor,
-} from "@talosprotocol/contracts";
+} from "@talos-protocol/contracts";
 
 export {
     deriveCursor,
@@ -13,4 +13,4 @@ export {
     compareCursor,
     assertCursorInvariant as validateCursor,
     isUuidV7,
-} from "@talosprotocol/contracts";
+} from "@talos-protocol/contracts";
