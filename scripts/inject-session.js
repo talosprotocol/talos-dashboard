@@ -1,7 +1,7 @@
 const { createHmac, createHash, randomBytes } = require("crypto");
 const { Client } = require("pg");
 
-const DATABASE_URL = 'postgres://postgres:password@localhost:5432/talos';
+const DATABASE_URL = 'postgresql://talos:talos_dev_password@localhost:5433/talos';
 const SECRET_B64 = "b64URLSecretPlaceholder";
 const COOKIE_NAME = "talos.sid"; // Dev mode
 

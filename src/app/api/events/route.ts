@@ -37,12 +37,16 @@ export async function GET(req: NextRequest): Promise<Response> {
   const isDevMode =
     process.env.NODE_ENV === "development" || process.env.DEV_MODE === "true";
 
+  let sessionData;
+
   if (!isDevMode) {
-    const sessionData = await validateRequest();
+    sessionData = await validateRequest();
     if (!sessionData) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   } else {
+     // Mock session for dev mode if needed, or leave empty to test unauth handling upstream
+     sessionData = { user: { id: 'dev-user', role: 'admin' } };
   }
 
   // ---------------------------------------------
@@ -90,16 +94,16 @@ export async function GET(req: NextRequest): Promise<Response> {
       upstreamUrl.searchParams.set("before", before);
     }
 
-    // SECURITY: Derive identity from server session, not client headers
+    // SECURITY: Derive identity from server session
     // In production, this would generate signed principal from session
     const upstreamHeaders: HeadersInit = {
       Accept: "application/json",
     };
 
-    // TODO: In production, derive these from session:
-    // const session = await getServerSession();
-    // upstreamHeaders['Authorization'] = `Bearer ${session.accessToken}`;
-    // upstreamHeaders['X-Talos-Principal'] = generateSignedPrincipal(session.user);
+    if (sessionData?.user) {
+        upstreamHeaders['X-Talos-Principal'] = sessionData.user.id;
+        upstreamHeaders['X-Talos-Role'] = sessionData.user.role || 'user';
+    }
 
     // For now in dev mode, we can allow unauthenticated calls to audit service
     // but this must be gated in production

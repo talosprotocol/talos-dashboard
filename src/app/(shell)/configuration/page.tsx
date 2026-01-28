@@ -3,12 +3,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/lib/hooks/use-toast";
 import { ConfigurationAdapter, Draft, HistoryItem, ValidationResult } from "@/features/configuration/adapters/configuration-adapter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { VERSION as REQUIRED_VERSION } from "@talos-protocol/contracts";
 import yaml from "js-yaml";
-import { AlertCircle, Check, FileJson, History, Save, Shield, Upload, Lock } from "lucide-react";
+import { AlertCircle, Check, FileJson, History, Save, Shield, Upload, Lock, LayoutTemplate, ShieldAlert, Bot } from "lucide-react";
 import { MonacoEditor } from "@/components/ui/MonacoEditor";
+import { CONFIG_TEMPLATES, Template } from "@/features/configuration/templates";
+import { AgentChat } from "@/features/agent/AgentChat";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function ConfigurationPage() {
   const [adapter] = useState(() => new ConfigurationAdapter());
@@ -20,7 +25,8 @@ export default function ConfigurationPage() {
   const [versionMismatch, setVersionMismatch] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'history' | 'templates' | 'agent'>('editor');
+  const [activeTemplateWarning, setActiveTemplateWarning] = useState<string | null>(null);
   const { toast } = useToast();
 
   const PRINCIPAL_ID = "admin-dashboard-user";
@@ -113,6 +119,17 @@ export default function ConfigurationPage() {
     }
   }
 
+  const handleUseTemplate = (template: Template) => {
+      setConfigText(template.yaml);
+      setActiveTab("editor");
+      
+      if (template.isDevOnly) {
+          setActiveTemplateWarning(`Warning: You are using a ${template.label} template. Do not use this in production.`);
+      } else {
+          setActiveTemplateWarning(null);
+      }
+  };
+
   if (versionMismatch) {
       return (
           <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
@@ -157,6 +174,18 @@ export default function ConfigurationPage() {
                     Editor
                 </button>
                 <button 
+                    onClick={() => setActiveTab('templates')} 
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'templates' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-white/[0.05] text-slate-500 hover:text-slate-300'}`}
+                >
+                    <LayoutTemplate className="w-3 h-3" /> Templates
+                </button>
+                <button 
+                    onClick={() => setActiveTab('agent')} 
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'agent' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-white/[0.05] text-slate-500 hover:text-slate-300'}`}
+                >
+                    <Bot className="w-3 h-3" /> Agent
+                </button>
+                <button 
                     onClick={() => setActiveTab('history')} 
                     className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'hover:bg-white/[0.05] text-slate-500 hover:text-slate-300'}`}
                 >
@@ -164,6 +193,25 @@ export default function ConfigurationPage() {
                 </button>
             </div>
         </div>
+        
+        {/* Dev Warning Banner */}
+        <AnimatePresence>
+          {activeTemplateWarning && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-6 py-3 flex items-center gap-3 text-yellow-500 text-sm font-medium"
+              >
+                  <ShieldAlert className="w-4 h-4" />
+                  {activeTemplateWarning}
+                  <Button variant="ghost" size="icon" className="h-5 w-5 ml-auto text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10" onClick={() => setActiveTemplateWarning(null)}>
+                      <span className="sr-only">Dismiss</span>
+                      &times;
+                  </Button>
+              </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Error Banner */}
         {error && (
@@ -175,10 +223,10 @@ export default function ConfigurationPage() {
 
         {/* Tab Content */}
         {activeTab === 'editor' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[70vh]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-14rem)] min-h-[500px]">
                 {/* Editor Column */}
-                <div className="space-y-4 flex flex-col h-full">
-                    <div className="flex justify-between items-center px-1">
+                <div className="space-y-4 flex flex-col h-full min-h-0">
+                    <div className="flex justify-between items-center px-1 shrink-0">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active YAML Core</label>
                         <div className="flex gap-2">
                             <button 
@@ -190,16 +238,17 @@ export default function ConfigurationPage() {
                             </button>
                         </div>
                     </div>
-                    <GlassPanel className="flex-1 bg-[#1e1e1e] border-white/5 p-0 overflow-hidden shadow-inner group/editor relative">
+                    <div className="flex-1 bg-[#1e1e1e] border-white/5 border rounded-xl overflow-hidden shadow-inner relative flex flex-col">
                         <MonacoEditor
                             value={configText}
                             onChange={(value) => setConfigText(value || "")}
+                            className="h-full w-full"
                         />
-                    </GlassPanel>
+                    </div>
                 </div>
 
                 {/* Actions Column */}
-                <div className="space-y-6">
+                <div className="space-y-6 h-full overflow-y-auto pr-2 custom-scrollbar">
                     {/* Validation Status */}
                     {validationResult && (
                         <GlassPanel className={`p-6 border shadow-2xl ${validationResult.valid ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-rose-500/5 border-rose-500/20'}`}>
@@ -269,6 +318,52 @@ export default function ConfigurationPage() {
             </div>
         )}
 
+        {activeTab === 'templates' && (
+              <FilterableTemplateList onUse={handleUseTemplate} />
+        )}
+
+        {activeTab === 'agent' && (
+            <div className="h-[calc(100vh-14rem)] min-h-[500px]">
+                <AgentChat 
+                    onApplyCode={async (code) => {
+                        setIsLoading(true);
+                        try {
+                            // Validation Gate
+                            const parsed = yaml.load(code);
+                            const res = await adapter.validate(parsed);
+                            
+                            if (!res.valid) {
+                                toast({
+                                    title: "Safety Gate Blocked",
+                                    description: "Agent output failed validation. Please refine the request.",
+                                    variant: "destructive"
+                                });
+                                // Show specific errors in toast or log?
+                                return;
+                            }
+
+                            setConfigText(code);
+                            setActiveTab('editor');
+                            toast({
+                                title: "Configuration Applied",
+                                description: "Agent output has been applied to the editor.",
+                                variant: "success"
+                            });
+                        } catch (e) {
+                             toast({
+                                title: "Parse Error",
+                                description: "Agent returned invalid YAML.",
+                                variant: "destructive"
+                            });
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }}
+                    isApplying={isLoading}
+                />
+            </div>
+        )}
+
         {activeTab === 'history' && (
             <div className="space-y-6">
                 <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2 px-1">
@@ -310,4 +405,109 @@ export default function ConfigurationPage() {
         )}
     </motion.div>
   );
+}
+
+function FilterableTemplateList({ onUse }: { onUse: (t: Template) => void }) {
+    const [filter, setFilter] = useState('all');
+    const [search, setSearch] = useState('');
+    
+    // Filter Logic
+    const filtered = CONFIG_TEMPLATES.filter(t => {
+        const matchesCategory = filter === 'all' || t.category === filter;
+        const searchLower = search.toLowerCase();
+        const matchesSearch = t.label.toLowerCase().includes(searchLower) || 
+                              t.description.toLowerCase().includes(searchLower) ||
+                              t.tags.some(tag => tag.toLowerCase().includes(searchLower));
+        return matchesCategory && matchesSearch;
+    });
+
+    const showComplianceBanner = filter === 'compliance' || (filter === 'all' && filtered.some(t => t.category === 'compliance'));
+
+    return (
+        <div className="flex flex-col h-[calc(100vh-14rem)] min-h-[500px]">
+            {/* Controls */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6 sticky top-0 z-10 bg-slate-950/80 backdrop-blur-sm p-1 rounded-xl">
+                <div className="relative flex-1">
+                    <input 
+                        type="text" 
+                        placeholder="Search templates..." 
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                    />
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                        {['all', 'development', 'production', 'compliance', 'gateway'].map(cat => (
+                            <button 
+                                key={cat}
+                                onClick={() => setFilter(cat)}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors whitespace-nowrap border ${filter === cat ? 'bg-indigo-600 text-white border-indigo-500/50 shadow-lg shadow-indigo-500/20' : 'bg-white/[0.03] text-slate-400 hover:text-white border-white/5'}`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                </div>
+            </div>
+
+            {/* Warning for Compliance */}
+            {showComplianceBanner && (
+                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl mb-6 flex gap-3 text-blue-400 animate-in fade-in slide-in-from-top-2">
+                    <Shield className="w-5 h-5 shrink-0" />
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wide">Compliance Disclaimer</h4>
+                        <p className="text-[10px] opacity-80 leading-relaxed max-w-2xl">
+                            Templates labeled as "Supporting Baseline" provide technical configurations that <u>support</u> compliance goals (e.g. HIPAA, GDPR). 
+                            However, using these templates does NOT guarantee compliance. You must verify deployment controls, data handling, and organizational processes.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pr-2 custom-scrollbar pb-10">
+                {filtered.map((tmpl) => (
+                    <GlassPanel key={tmpl.id} className={`p-6 border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-colors flex flex-col gap-4 relative group ${tmpl.isDevOnly ? 'border-rose-500/10 bg-rose-950/10' : ''}`}>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <div className="flex gap-2 mb-2">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">{tmpl.category}</span>
+                                    {tmpl.riskLevel === 'high' && <span className="text-[9px] font-black uppercase tracking-widest text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded">High Risk</span>}
+                                </div>
+                                <h3 className="font-bold text-lg text-white group-hover:text-indigo-400 transition-colors">{tmpl.label}</h3>
+                                <p className="text-xs text-slate-400 mt-2 leading-relaxed h-10 line-clamp-2">{tmpl.description}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                            {tmpl.tags.map(tag => (
+                                <span key={tag} className="text-[9px] font-mono text-indigo-300/60 bg-indigo-500/5 px-1.5 py-0.5 rounded border border-indigo-500/10">#{tag}</span>
+                            ))}
+                        </div>
+
+                        {tmpl.isDevOnly && (
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-rose-500 bg-rose-500/5 p-2 rounded border border-rose-500/10">
+                                <ShieldAlert className="w-3 h-3" />
+                                DEV ONLY: Unsafe for Prod
+                            </div>
+                        )}
+                        
+                        <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-500 font-mono font-bold tracking-widest uppercase">v{tmpl.minContractsVersion}+</span>
+                            <Button 
+                                size="sm" 
+                                onClick={() => onUse(tmpl)}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] uppercase tracking-widest"
+                            >
+                                Use Template
+                            </Button>
+                        </div>
+                    </GlassPanel>
+                ))}
+                {filtered.length === 0 && (
+                    <div className="col-span-full py-20 text-center text-slate-500">
+                        <p className="text-sm">No templates match your search criteria.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }

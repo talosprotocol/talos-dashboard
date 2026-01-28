@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${sessionData.user.id}`, // Placeholder until access tokens
-                "X-Talos-Principal": sessionData.user.id
+                "X-Talos-Principal": sessionData.user.id,
+                "X-Talos-Role": (sessionData.user as any).role || 'user'
             },
             body: JSON.stringify(body),
             signal: req.signal, 

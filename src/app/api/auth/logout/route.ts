@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { logout } from '@/lib/auth/session';
+import { invalidateSession } from '@/lib/auth/session';
 import { headers } from 'next/headers';
 
 const EXPECTED_ORIGIN = process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000';
@@ -14,6 +14,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
     }
 
-    await logout();
+    await invalidateSession();
     return NextResponse.json({ success: true });
 }

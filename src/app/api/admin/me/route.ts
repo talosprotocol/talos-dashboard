@@ -28,12 +28,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   // ---------------------------------------------
   const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
   
+  let sessionData;
+  
   if (!isDevMode) {
-    const sessionData = await validateRequest();
+    sessionData = await validateRequest();
     if (!sessionData) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   } else {
+     sessionData = { user: { id: 'dev-user', role: 'admin' } };
   }
 
   // ---------------------------------------------
@@ -43,13 +46,18 @@ export async function GET(req: NextRequest): Promise<Response> {
     const upstreamUrl = `${TALOS_GATEWAY_URL}/admin/v1/me`;
 
     // SECURITY: In production, derive these from server session
-    // TODO: Implement session-based identity
-    // const session = await getServerSession();
-    // upstreamHeaders['Authorization'] = `Bearer ${session.accessToken}`;
-    // upstreamHeaders['X-Talos-Principal'] = generateSignedPrincipal(session.user);
+    const headers: HeadersInit = {
+        'Accept': 'application/json'
+    };
+
+    if (sessionData?.user) {
+        headers['X-Talos-Principal'] = sessionData.user.id;
+        headers['X-Talos-Role'] = sessionData.user.role || 'user';
+    }
     
     const upstream = await fetch(upstreamUrl, {
       method: 'GET',
+      headers,
       signal: req.signal,
     });
 

@@ -33,7 +33,7 @@ export async function verifyCookieSignature(
 
   const key = await crypto.subtle.importKey(
     'raw',
-    secretBytes,
+    secretBytes as BufferSource,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['verify']
@@ -45,7 +45,7 @@ export async function verifyCookieSignature(
   return await crypto.subtle.verify(
     'HMAC',
     key,
-    sigBuffer,
+    sigBuffer as BufferSource,
     enc.encode(dataToSign)
   );
 }
