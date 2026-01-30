@@ -1,4 +1,3 @@
-import { type NextRequest } from 'next/server';
 
 export const COOKIE_NAME_PROD = '__Host-talos.sid';
 export const COOKIE_NAME_DEV = 'talos.sid';

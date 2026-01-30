@@ -11,9 +11,8 @@ import { AlertCircle, Check, FileJson, History, Save, Shield, Upload, Lock, Layo
 import { MonacoEditor } from "@/components/ui/MonacoEditor";
 import { CONFIG_TEMPLATES, Template } from "@/features/configuration/templates";
 import { AgentChat } from "@/features/agent/AgentChat";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 
 export default function ConfigurationPage() {
   const [adapter] = useState(() => new ConfigurationAdapter());
@@ -349,8 +348,8 @@ export default function ConfigurationPage() {
                                 description: "Agent output has been applied to the editor.",
                                 variant: "success"
                             });
-                        } catch (e) {
-                             toast({
+                        } catch (_e) {
+                            toast({
                                 title: "Parse Error",
                                 description: "Agent returned invalid YAML.",
                                 variant: "destructive"
@@ -456,7 +455,7 @@ function FilterableTemplateList({ onUse }: { onUse: (t: Template) => void }) {
                     <div>
                         <h4 className="text-xs font-bold uppercase tracking-wide">Compliance Disclaimer</h4>
                         <p className="text-[10px] opacity-80 leading-relaxed max-w-2xl">
-                            Templates labeled as "Supporting Baseline" provide technical configurations that <u>support</u> compliance goals (e.g. HIPAA, GDPR). 
+                            Templates labeled as &quot;Supporting Baseline&quot; provide technical configurations that <u>support</u> compliance goals (e.g. HIPAA, GDPR).
                             However, using these templates does NOT guarantee compliance. You must verify deployment controls, data handling, and organizational processes.
                         </p>
                     </div>

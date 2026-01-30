@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Shield, BarChart3, Settings, FileText, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +72,7 @@ export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarPro
             const isActive = pathname === item.href;
             
             return (
-              <a // Changed to 'a' or keep Link but ensure clean render
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={(e) => {
@@ -90,7 +91,7 @@ export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarPro
                 )}
                 <Icon className={cn("h-4 w-4 shrink-0 transition-colors", isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300")} />
                 <span>{item.title}</span>
-              </a>
+              </Link>
             );
           })}
         </div>

@@ -178,13 +178,13 @@ extensions:
             }
              setIsTyping(false);
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(e);
             setIsTyping(false);
              setMessages(prev => [...prev, {
                 id: 'error-' + Date.now(),
                 role: 'system',
-                content: e.message || 'Error: Could not connect to Agent.',
+                content: e instanceof Error ? e.message : 'Error: Could not connect to Agent.',
                 timestamp: Date.now()
             }]);
         }
