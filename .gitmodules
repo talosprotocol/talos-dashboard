@@ -1,7 +1,0 @@
-[submodule "submodules/examples"]
-	path = submodules/examples
-	url = https://github.com/talosprotocol/talos-examples.git
-[submodule "submodules/talos-contracts"]
-	path = submodules/talos-contracts
-	url = ../talos-contracts
-	branch = main
