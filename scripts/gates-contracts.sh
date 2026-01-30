@@ -16,8 +16,8 @@ if git grep -nE "file:///|(\.\./talos\b)|workspace/|github\.com/talosprotocol/ta
 fi
 
 # Wrong package name ban
-if git grep -n "@talos-protocol/contracts" -- . "$EXCLUDE" "$EXCLUDE2" "$EXCLUDE3" "$EXCLUDE4" "$EXCLUDE5"; then
-  fail "Found @talos-protocol/contracts. Must use @talosprotocol/contracts."
+if git grep -n "@talosprotocol/contracts" -- . "$EXCLUDE" "$EXCLUDE2" "$EXCLUDE3" "$EXCLUDE4" "$EXCLUDE5"; then
+  fail "Found @talosprotocol/contracts. Must use @talosprotocol/contracts."
 fi
 
 # btoa/atob ban

@@ -1,6 +1,6 @@
 import { AuditEvent, CursorPage, GatewayStatus } from "./schemas";
 import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret } from "./DataSourceTypes";
-import { checkCursorContinuity, type CursorGap } from "@talos-protocol/contracts";
+import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
 import { validateCursor } from "../integrity/cursor";
 
 // --- Integrity & Backfill State ---

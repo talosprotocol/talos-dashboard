@@ -1,6 +1,6 @@
 import { validateRequest } from "@/lib/auth/session";
 import { NextRequest, NextResponse } from "next/server";
-import { VERSION as CLIENT_CONTRACTS_VERSION } from "@talos-protocol/contracts";
+import { VERSION as CLIENT_CONTRACTS_VERSION } from "@talosprotocol/contracts";
 import { DATA_SOURCE_MODE } from "@/lib/config";
 
 const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8000";

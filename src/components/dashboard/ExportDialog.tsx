@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Download, AlertTriangle, FileJson, X, CheckCircle, Shield, BarChart3 } from "lucide-react";
-import { RedactionLevel } from "@talos-protocol/contracts";
+import { RedactionLevel } from "@talosprotocol/contracts";
 
 interface ExportDialogProps {
   readonly mode: "selected" | "filtered";

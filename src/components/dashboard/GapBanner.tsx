@@ -2,7 +2,7 @@
 
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import type { CursorGap } from "@talos-protocol/contracts";
+import type { CursorGap } from "@talosprotocol/contracts";
 
 interface GapBannerProps {
     readonly gaps: CursorGap[];

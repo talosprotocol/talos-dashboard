@@ -6,7 +6,7 @@ const tsconfig = require(tsconfigPath);
 
 // Remove the local path alias for contracts to force using the installed package
 if (tsconfig.compilerOptions && tsconfig.compilerOptions.paths) {
-  delete tsconfig.compilerOptions.paths['@talos-protocol/contracts'];
+  delete tsconfig.compilerOptions.paths['@talosprotocol/contracts'];
 }
 
 fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));

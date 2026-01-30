@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@talos-protocol/contracts": ["../../contracts/typescript/src/index.ts"]
+      "@talosprotocol/contracts": ["../../contracts/typescript/src/index.ts"]
     }
   },
   "include": [

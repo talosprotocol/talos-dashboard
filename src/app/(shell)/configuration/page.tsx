@@ -5,7 +5,7 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { ConfigurationAdapter, Draft, HistoryItem, ValidationResult } from "@/features/configuration/adapters/configuration-adapter";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { VERSION as REQUIRED_VERSION } from "@talos-protocol/contracts";
+import { VERSION as REQUIRED_VERSION } from "@talosprotocol/contracts";
 import yaml from "js-yaml";
 import { AlertCircle, Check, FileJson, History, Save, Shield, Upload, Lock, LayoutTemplate, ShieldAlert, Bot } from "lucide-react";
 import { MonacoEditor } from "@/components/ui/MonacoEditor";

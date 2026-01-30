@@ -1,4 +1,4 @@
-import { createEvidenceBundle, RedactionLevel, AuditEvent, GatewayStatus } from "@talos-protocol/contracts";
+import { createEvidenceBundle, RedactionLevel, AuditEvent, GatewayStatus } from "@talosprotocol/contracts";
 import { AuditFilters } from "@/lib/data/DataSource";
 
 export interface ExportOptions {

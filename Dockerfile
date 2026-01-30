@@ -42,10 +42,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY site/dashboard/ .
 
 # Re-install contracts package (copy built package into node_modules)
-RUN rm -rf node_modules/@talos-protocol/contracts && \
-    mkdir -p node_modules/@talos-protocol/contracts && \
-    cp -r /contracts/typescript/package.json node_modules/@talos-protocol/contracts/ && \
-    cp -r /contracts/typescript/dist node_modules/@talos-protocol/contracts/
+RUN rm -rf node_modules/@talosprotocol/contracts && \
+    mkdir -p node_modules/@talosprotocol/contracts && \
+    cp -r /contracts/typescript/package.json node_modules/@talosprotocol/contracts/ && \
+    cp -r /contracts/typescript/dist node_modules/@talosprotocol/contracts/
 
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1

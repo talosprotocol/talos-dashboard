@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  transpilePackages: ["@talos-protocol/contracts"],
+  transpilePackages: ["@talosprotocol/contracts"],
 };
 
 export default nextConfig;

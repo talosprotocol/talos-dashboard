@@ -3,7 +3,7 @@
  * Events generated with proper event_hash using contracts helper
  */
 
-import { base64urlEncodeUtf8 } from '@talos-protocol/contracts';
+import { base64urlEncodeUtf8 } from '@talosprotocol/contracts';
 
 interface AuditEvent {
   schema_id: string;

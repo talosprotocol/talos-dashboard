@@ -11,7 +11,7 @@ import {
     IntegrityStatus,
     BackfillStatus
 } from "@/lib/data/DataSource";
-import { CursorGap } from "@talos-protocol/contracts";
+import { CursorGap } from "@talosprotocol/contracts";
 import { useEffect, useState } from "react";
 
 export function StatusBanners() {

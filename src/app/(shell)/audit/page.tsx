@@ -10,7 +10,7 @@ import { ExportDialog } from "@/components/dashboard/ExportDialog";
 import { AuditFiltersPanel } from "@/components/dashboard/AuditFiltersPanel";
 import { CursorMismatchBanner } from "@/components/dashboard/CursorMismatchBanner";
 import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
-import { RedactionLevel } from "@talos-protocol/contracts";
+import { RedactionLevel } from "@talosprotocol/contracts";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuditState, selectOrderedEvents, selectInvalidEvents, selectCanFetchMore } from "@/lib/hooks/useAuditState";
 import { useAuditSSE } from "@/lib/hooks/useAuditSSE";

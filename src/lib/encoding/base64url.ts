@@ -1,4 +1,4 @@
-// Thin re-export from @talos-protocol/contracts
+// Thin re-export from @talosprotocol/contracts
 // Base64url logic is owned by contracts, dashboard imports only
 
 export {
@@ -6,4 +6,4 @@ export {
     base64urlDecodeToBytes as base64UrlDecodeToBytes,
     base64urlEncodeUtf8 as base64urlEncodeUtf8,
     base64urlDecodeToUtf8 as base64urlDecodeToUtf8,
-} from "@talos-protocol/contracts";
+} from "@talosprotocol/contracts";
