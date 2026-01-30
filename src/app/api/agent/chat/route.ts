@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
             headers: {
                 "Content-Type": "application/json",
                 "X-Talos-Principal": sessionData.user.id,
-                "X-Talos-Role": (sessionData.user as any).role || 'user'
+                "X-Talos-Role": (sessionData.user as { role: string }).role || 'user'
             },
             body: JSON.stringify(body),
             signal: req.signal, 

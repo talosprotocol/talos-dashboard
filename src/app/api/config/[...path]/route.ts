@@ -57,15 +57,16 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
           headers: res.headers
       });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
+      const err = e as Error;
       // Deterministic Error Mapping
-      if (e.name === 'AbortError') {
+      if (err.name === 'AbortError') {
           return new NextResponse("Gateway Timeout", { status: 504 });
       }
-      if (e.message === "Invalid Idempotency-Key format") {
+      if (err.message === "Invalid Idempotency-Key format") {
            return new NextResponse("Bad Request: Invalid Idempotency-Key", { status: 400 });
       }
-      console.error("Proxy Upstream Error:", e);
+      console.error("Proxy Upstream Error:", err);
       return new NextResponse("Bad Gateway", { status: 502 });
   }
 }

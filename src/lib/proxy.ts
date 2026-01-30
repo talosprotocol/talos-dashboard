@@ -57,7 +57,7 @@ export function normalizeAndValidatePath(pathSegments: string[]): string | null 
             if (lower.includes('%2e') || lower.includes('%2f') || lower.includes('%5c')) {
                 return null;
             }
-        } catch (e) {
+        } catch (_e) {
             return null; // Malformed URI component
         }
     }
@@ -110,8 +110,8 @@ export async function createRecastRequest(
     
     // Valid session -> Extract Principal
     let principalId = session.user.id;
-    if (!principalId && (session.user as any).email) {
-        principalId = (session.user as any).email;
+    if (!principalId && (session.user as { email?: string }).email) {
+        principalId = (session.user as { email: string }).email;
     }
     if (!principalId) {
          // Fallback for dev only if needed, but PR-1 says Strict.

@@ -1,9 +1,10 @@
-const { createHmac, createHash, randomBytes } = require("crypto");
-const { Client } = require("pg");
+import { createHmac, createHash, randomBytes } from "crypto";
+import pkg from "pg";
+const { Client } = pkg;
 
 const DATABASE_URL = 'postgresql://talos:talos_dev_password@localhost:5433/talos';
 const SECRET_B64 = "b64URLSecretPlaceholder";
-const COOKIE_NAME = "talos.sid"; // Dev mode
+const _COOKIE_NAME = "talos.sid"; // Dev mode
 
 async function main() {
   const client = new Client({ connectionString: DATABASE_URL });
