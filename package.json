@@ -72,6 +72,9 @@
     "typescript": "5.9.3",
     "vitest": "^4.0.16"
   },
+  "overrides": {
+    "esbuild": "^0.25.12"
+  },
   "vitest": {
     "test": {
       "exclude": [
