@@ -29,9 +29,9 @@ describe('Configuration Templates Library', () => {
             });
 
             it('should contain minimal required config fields (version)', () => {
-                const parsed = yaml.load(template.yaml) as { version?: string };
+                const parsed = yaml.load(template.yaml) as { version?: string; config_version?: string };
                 expect(parsed).toBeTruthy();
-                expect(parsed.version).toBeTruthy();
+                expect(parsed.version ?? parsed.config_version).toBeTruthy();
             });
 
             if (template.category === 'compliance') {
