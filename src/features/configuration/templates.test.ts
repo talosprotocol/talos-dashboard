@@ -31,11 +31,7 @@ describe('Configuration Templates Library', () => {
             it('should contain minimal required config fields (version)', () => {
                 const parsed = yaml.load(template.yaml) as { version?: string; config_version?: string };
                 expect(parsed).toBeTruthy();
-<<<<<<< HEAD
                 expect(parsed.version ?? parsed.config_version).toBeTruthy();
-=======
-                expect(parsed.version || parsed.config_version).toBeTruthy();
->>>>>>> c59c14fb (Standardize protocol implementation and fix production gate violations)
             });
 
             if (template.category === 'compliance') {
