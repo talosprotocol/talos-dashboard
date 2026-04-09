@@ -48,7 +48,7 @@ export function Sidebar() {
 
       <div className="mt-auto p-6 border-t border-slate-900">
         <Link
-          href="/help"
+          href="https://docs.talosprotocol.com"
           className="flex items-center space-x-3 px-3 py-2 text-sm text-slate-500 hover:text-slate-200"
         >
           <HelpCircle className="w-5 h-5" />

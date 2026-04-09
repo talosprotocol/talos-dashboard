@@ -1,59 +1,33 @@
-import { NextResponse } from "next/server";
-import fs from "node:fs/promises";
-import path from "node:path";
-
-export const dynamic = "force-dynamic";
-
-const SUBS_PATH = path.join(process.cwd(), "submodules");
-const MANIFEST_PATH = path.join(
-  SUBS_PATH,
-  "talos-contracts",
-  "examples_manifest.json",
-);
-
-// Taxonomy Error Codes
-const ERR_MISSING_DEPENDENCY = "TALOS_MISSING_DEPENDENCY";
-const ERR_INVALID_MANIFEST = "TALOS_INVALID_MANIFEST";
+import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export async function GET() {
   try {
-    // 1. Read Manifest File
-    let fileContent: string;
-    try {
-      fileContent = await fs.readFile(MANIFEST_PATH, "utf-8");
-    } catch (error) {
-      console.error(`Failed to read manifest at ${MANIFEST_PATH}:`, error);
-      return NextResponse.json(
-        {
-          code: ERR_MISSING_DEPENDENCY,
-          details: {
-            path: MANIFEST_PATH,
-            reason: "Contracts submodule not initialized or manifest missing",
-          },
-        },
-        { status: 500 },
-      );
+    const manifestPath = path.join(process.cwd(), '..', '..', 'examples', 'examples_manifest.json');
+    // If running in monorepo, check root too
+    const possiblePaths = [
+      path.join(process.cwd(), 'examples', 'examples_manifest.json'),
+      path.join(process.cwd(), '..', 'examples', 'examples_manifest.json'),
+      path.join(process.cwd(), '..', '..', 'examples', 'examples_manifest.json'),
+      path.join(process.cwd(), '..', '..', '..', 'examples', 'examples_manifest.json')
+    ];
+    
+    let manifestData = null;
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        manifestData = fs.readFileSync(p, 'utf8');
+        break;
+      }
     }
 
-    // 2. Parse JSON
-    let manifest;
-    try {
-      manifest = JSON.parse(fileContent);
-    } catch {
-      return NextResponse.json(
-        {
-          code: ERR_INVALID_MANIFEST,
-          details: { reason: "JSON parse failed" },
-        },
-        { status: 500 },
-      );
+    if (!manifestData) {
+      return NextResponse.json({ error: 'Manifest not found' }, { status: 404 });
     }
 
-    return NextResponse.json(manifest);
+    return NextResponse.json(JSON.parse(manifestData));
   } catch (error) {
-    return NextResponse.json(
-      { code: "TALOS_INTERNAL_ERROR", details: { message: String(error) } },
-      { status: 500 },
-    );
+    console.error('Failed to load examples manifest:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

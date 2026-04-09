@@ -1,6 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiAdapter } from '../adapters/api-adapter';
-import { Merchant } from '../domain/entities';
+import { JsonObject, Merchant } from '../domain/entities';
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function useMerchants() {
   const [merchants, setMerchants] = useState<Merchant[]>([]);
@@ -10,32 +14,32 @@ export function useMerchants() {
   // Hexagonal Adapter instance
   const api = useMemo(() => new ApiAdapter(), []);
 
-  const loadMerchants = async () => {
+  const loadMerchants = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await api.getMerchants();
       setMerchants(data);
       setError(null);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load merchants');
+    } catch (error) {
+      setError(getErrorMessage(error, 'Failed to load merchants'));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [api]);
 
-  const updatePolicy = async (merchantId: string, version: string, payload: any) => {
+  const updatePolicy = useCallback(async (merchantId: string, version: string, payload: JsonObject) => {
     try {
       await api.updatePolicy(merchantId, version, payload);
       await loadMerchants(); // Refresh
-    } catch (e: any) {
-      setError(e.message || 'Failed to update policy');
-      throw e;
+    } catch (error) {
+      setError(getErrorMessage(error, 'Failed to update policy'));
+      throw error;
     }
-  };
+  }, [api, loadMerchants]);
 
   useEffect(() => {
-    loadMerchants();
-  }, []);
+    void loadMerchants();
+  }, [loadMerchants]);
 
   return {
     merchants,

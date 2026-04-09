@@ -326,9 +326,7 @@ const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "HTTP") as DataMode;
 
 function createDataSource(mode: DataMode): DataSource {
     switch (mode) {
-        case "WS": {
-            return new WsDataSource();
-        }
+        case "WS":
         case "HTTP":
         case "LIVE": return new HttpDataSource();
         case "SQLITE": return new SqliteDataSource();

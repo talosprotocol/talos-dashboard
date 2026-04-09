@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Copy contracts first (needed for file: dependency)
 COPY contracts/typescript /contracts/typescript
+COPY contracts/examples_manifest.json /contracts/examples_manifest.json
 
 # Copy dashboard package files
 COPY site/dashboard/package.json ./
@@ -79,6 +80,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -u 1001 -S nextjs -G nodejs
 
 # Copy built assets
+COPY --from=deps /contracts/examples_manifest.json ./contracts/examples_manifest.json
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -92,7 +94,7 @@ ENV HOSTNAME="0.0.0.0"
 
 # Healthcheck using wget (alpine has wget by default)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/readyz || exit 1
 
 CMD ["node", "server.js"]
 

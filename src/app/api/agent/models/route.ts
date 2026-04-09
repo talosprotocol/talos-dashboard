@@ -6,16 +6,20 @@ const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8090";
 
 export async function GET() {
   try {
-    const res = await fetch(`${AGENT_URL}/v1/models`, {
-        // Auth headers will be added here
-    });
+    const res = await fetch(`${AGENT_URL}/v1/chat/summary`);
     
     if (!res.ok) {
         return NextResponse.json({ models: [] }, { status: res.status });
     }
     
-    const data = await res.json();
-    return NextResponse.json(data);
+    // The main.py does not define /v1/models, but uses AI_MODEL env var
+    // We return a list showing the tinyllama default and local options
+    return NextResponse.json({ 
+        models: [
+            { id: "tinyllama:latest", name: "TinyLlama (Fast/Secure)", group: "Security Focused" },
+            { id: "llama3", name: "Llama 3 (Enhanced)", group: "General Intelligence" }
+        ] 
+    });
   } catch (error) {
     console.error("Failed to fetch models", error);
     return NextResponse.json({ models: [] }, { status: 502 });

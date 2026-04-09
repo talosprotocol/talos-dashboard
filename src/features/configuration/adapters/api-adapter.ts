@@ -1,8 +1,8 @@
-import { Merchant, Policy } from "../domain/entities";
+import { JsonObject, Merchant } from "../domain/entities";
 
 export interface ApiPort {
   getMerchants(): Promise<Merchant[]>;
-  updatePolicy(merchantId: string, version: string, payload: any): Promise<void>;
+  updatePolicy(merchantId: string, version: string, payload: JsonObject): Promise<void>;
 }
 
 export class ApiAdapter implements ApiPort {
@@ -15,7 +15,7 @@ export class ApiAdapter implements ApiPort {
     ];
   }
 
-  async updatePolicy(merchantId: string, version: string, payload: any): Promise<void> {
+  async updatePolicy(merchantId: string, version: string, payload: JsonObject): Promise<void> {
     const resp = await fetch(`${self.location.origin}${this.baseUrl}/policies`, {
       method: 'POST',
       headers: { 
@@ -26,8 +26,8 @@ export class ApiAdapter implements ApiPort {
     });
 
     if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error || 'Failed to update policy');
+        const err = await resp.json().catch(() => null) as { error?: string } | null;
+        throw new Error(err?.error || 'Failed to update policy');
     }
   }
 }

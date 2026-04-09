@@ -9,7 +9,6 @@ import { verifyAndConsumeChallenge } from '@/lib/auth/challenges';
 import { createSession, validateRequest } from '@/lib/auth/session';
 import { headers } from 'next/headers';
 import { count } from 'drizzle-orm';
-import { bytesToB64url } from '@/lib/auth/utils';
 
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
 const APP_ORIGIN = process.env.APP_ORIGIN!;
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
     try {
         const clientData = JSON.parse(Buffer.from(body.response.clientDataJSON, 'base64').toString('utf8'));
         challengeStr = clientData.challenge;
-    } catch (e) {
+    } catch {
          return NextResponse.json({ error: 'Invalid client data' }, { status: 400 });
     }
     

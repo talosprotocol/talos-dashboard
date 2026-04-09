@@ -40,16 +40,22 @@ export class HttpDataSource implements DataSource {
 
     protected events: AuditEvent[] = []; 
 
-    // Constructor removed (useless)
+    constructor() {
+        _integrityStatus = "OK";
+        _backfillStatus = "IDLE";
+        _backfillLoadedCount = 0;
+        _backfillRetries = 0;
+        _cursorGaps.length = 0;
+    }
 
     async getGatewayStatus(): Promise<GatewayStatus> {
-        const res = await fetch('/api/gateway/status');
+        const res = await fetch('/api/admin/v1/gateway/status');
         if (!res.ok) throw new Error('Failed to fetch status');
         return res.json();
     }
 
     async getMe(): Promise<UserProfile> {
-        const res = await fetch("/api/admin/me");
+        const res = await fetch("/api/admin/v1/me");
         if (!res.ok) throw new Error("Failed to fetch user profile");
         return res.json();
     }
@@ -200,13 +206,10 @@ export class HttpDataSource implements DataSource {
     }
 
     async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
-        const res = await fetch("/api/agent/chat", {
+        const res = await fetch("/api/admin/v1/llm/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                // Authorization is handled by the proxy (session cookie) usually, 
-                // but if the API expects Bearer from client, we keep it. 
-                // Checks user D1: "/api/agent/chat"
                 "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify(body)
@@ -220,14 +223,14 @@ export class HttpDataSource implements DataSource {
 
     // Secrets Management
     async listSecrets(): Promise<Secret[]> {
-        const res = await fetch("/api/admin/secrets");
+        const res = await fetch("/api/admin/v1/secrets");
         if (!res.ok) throw new Error("Failed to list secrets");
         const data = await res.json();
         return data.secrets;
     }
 
     async createSecret(name: string, value: string): Promise<void> {
-        const res = await fetch("/api/admin/secrets", {
+        const res = await fetch("/api/admin/v1/secrets", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, value })
@@ -236,7 +239,7 @@ export class HttpDataSource implements DataSource {
     }
 
     async deleteSecret(name: string): Promise<void> {
-        const res = await fetch(`/api/admin/secrets?name=${encodeURIComponent(name)}`, {
+        const res = await fetch(`/api/admin/v1/secrets?name=${encodeURIComponent(name)}`, {
             method: "DELETE"
         });
         if (!res.ok) throw new Error("Failed to delete secret");
@@ -251,7 +254,7 @@ export class HttpDataSource implements DataSource {
             latency_avg_ms: number; 
         } | null = null;
         try {
-            const res = await fetch(`${this.baseUrl}/admin/telemetry/stats?window_hours=24`);
+            const res = await fetch(`${this.baseUrl}/admin/v1/telemetry/stats?window_hours=24`);
             if (res.ok) usageStats = await res.json();
         } catch (e) {
             console.error("Failed to fetch usage stats", e);
@@ -260,10 +263,17 @@ export class HttpDataSource implements DataSource {
         // 2. Fetch real audit stats (denials, volume series)
         let auditStats: DashboardStats | null = null;
         try {
-            const res = await fetch(`${this.baseUrl}/admin/audit/stats?window_hours=24`);
+            const res = await fetch(`${this.baseUrl}/admin/v1/audit/stats?window_hours=24`);
             if (res.ok) auditStats = await res.json();
         } catch (e) {
             console.error("Failed to fetch audit stats", e);
+        }
+
+        // Calculate real success rate from denial counts
+        let successRate = 1.0;
+        if (auditStats && auditStats.requests_24h > 0) {
+            const totalDenials = Object.values(auditStats.denial_reason_counts || {}).reduce((a, b) => a + b, 0);
+            successRate = (auditStats.requests_24h - totalDenials) / auditStats.requests_24h;
         }
 
         return {
@@ -271,10 +281,10 @@ export class HttpDataSource implements DataSource {
             tokens_24h: usageStats?.tokens_total ?? 0,
             cost_24h: usageStats?.cost_usd ?? 0,
             latency_avg: usageStats?.latency_avg_ms ?? 0,
-            auth_success_rate: 1.0, 
+            auth_success_rate: successRate, 
             denial_reason_counts: auditStats?.denial_reason_counts ?? {},
             request_volume_series: auditStats?.request_volume_series ?? [],
-            latency_percentiles: { p50: 10, p95: 20, p99: 50 },
+            latency_percentiles: auditStats?.latency_percentiles ?? { p50: 10, p95: 20, p99: 50 },
         };
     }
 
@@ -284,7 +294,8 @@ export class HttpDataSource implements DataSource {
         filters?: AuditFilters
     }): Promise<CursorPage<AuditEvent>> {
         // Call dashboard proxy, not direct service URL
-        const url = new URL('/api/events', window.location.origin);
+        const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+        const url = new URL('/api/admin/v1/audit/events', origin);
         url.searchParams.set('limit', params.limit.toString());
         if (params.cursor) url.searchParams.set('before', params.cursor);
 
@@ -328,70 +339,89 @@ export class HttpDataSource implements DataSource {
     }
 
     subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
-        const es = new EventSource("/api/audit/stream");
+        let oldestCursor: string | undefined;
+        let isClosed = false;
 
-        es.addEventListener("meta", (e: MessageEvent) => {
-            // Protocol version check could happen here
-            console.log("[AuditStream] Connected", JSON.parse(e.data));
-        });
+        const poll = async () => {
+            if (isClosed) return;
 
-        es.addEventListener("audit_event", (e: MessageEvent) => {
             try {
-                const event: AuditEvent = JSON.parse(e.data);
-                
-                // Validate integrity
-                this.ingestEvent(event);
-
-                // Client-side filtering (stream is full firehose)
-                if (filters) {
-                    if (filters.session_id && event.session_id !== filters.session_id) return;
-                    if (filters.outcome && event.outcome !== filters.outcome) return;
-                    if (filters.correlation_id && event.correlation_id !== filters.correlation_id) return;
-                    if (filters.denial_reason && event.denial_reason !== filters.denial_reason) return;
-                }
-
-                cb({ type: "audit_event", event });
-            } catch (err) {
-                console.error("[AuditStream] Parse error", err);
+                await this.pollStatus(cb);
+                oldestCursor = await this.pollRecentEvents(cb, oldestCursor, filters);
+                oldestCursor = await this.handleBackfill(cb, oldestCursor, filters);
+            } catch (error) {
+                console.error("[AuditStream] Poll failure", error);
             }
-        });
-
-        es.addEventListener("heartbeat", () => {
-            // Keep-alive received
-        });
-
-        es.addEventListener("error", (e: MessageEvent) => {
-            try {
-                const err = JSON.parse(e.data);
-                console.error("[AuditStream] Server Error:", err);
-                es.close();
-            } catch {
-                // If not JSON, it might be a generic error
-            }
-        });
-
-        es.onerror = (_e) => {
-            // SSE connection errors happen normally (e.g. server restart, network glitch)
-            // We only alert if the session is actually invalid.
-            fetch("/api/auth/session")
-                .then(res => {
-                    if (res.status === 401 || res.status === 403) {
-                        console.error("[AuditStream] Session invalid, redirecting to login");
-                        window.location.href = "/login";
-                        es.close();
-                    } else if (!res.ok) {
-                        console.warn("[AuditStream] Connection issue, session check failed with status:", res.status);
-                    } else {
-                        // Session is OK, EventSource will automatically retry
-                        console.log("[AuditStream] Connection lost, retrying...");
-                    }
-                })
-                .catch(() => {
-                    // Network error during session check, let SSE retry silently
-                });
         };
 
-        return () => es.close();
+        const interval = setInterval(() => {
+            void poll();
+        }, 2000);
+
+        const EventSourceCtor = globalThis.EventSource;
+        const es = EventSourceCtor ? new EventSourceCtor("/api/admin/v1/audit/stream") : null;
+
+        if (es) {
+            es.addEventListener("meta", (e: MessageEvent) => {
+                console.log("[AuditStream] Connected", JSON.parse(e.data));
+            });
+
+            es.addEventListener("audit_event", (e: MessageEvent) => {
+                try {
+                    const event: AuditEvent = JSON.parse(e.data);
+                    this.ingestEvent(event);
+
+                    if (filters) {
+                        if (filters.session_id && event.session_id !== filters.session_id) return;
+                        if (filters.outcome && event.outcome !== filters.outcome) return;
+                        if (filters.correlation_id && event.correlation_id !== filters.correlation_id) return;
+                        if (filters.denial_reason && event.denial_reason !== filters.denial_reason) return;
+                    }
+
+                    cb({ type: "audit_event", event });
+                } catch (error) {
+                    console.error("[AuditStream] Parse error", error);
+                }
+            });
+
+            es.addEventListener("heartbeat", () => {
+                // Keep-alive received
+            });
+
+            es.addEventListener("error", (e: MessageEvent) => {
+                try {
+                    const err = JSON.parse(e.data);
+                    console.error("[AuditStream] Server Error:", err);
+                    es.close();
+                } catch {
+                    // If not JSON, it might be a generic error
+                }
+            });
+
+            es.onerror = (_e) => {
+                fetch("/api/auth/session")
+                    .then(res => {
+                        if (res.status === 401 || res.status === 403) {
+                            console.error("[AuditStream] Session invalid, redirecting to login");
+                            window.location.href = "/login";
+                            es.close();
+                        } else if (!res.ok) {
+                            console.warn("[AuditStream] Connection issue, session check failed with status:", res.status);
+                        } else {
+                            console.log("[AuditStream] Connection lost, retrying...");
+                        }
+                    })
+                    .catch(() => {
+                        // Network error during session check, let SSE retry silently
+                    });
+            };
+        }
+
+        return () => {
+            isClosed = true;
+            clearInterval(interval);
+            es?.close();
+        };
     }
 
     private async pollStatus(cb: (msg: StreamMessage) => void) {

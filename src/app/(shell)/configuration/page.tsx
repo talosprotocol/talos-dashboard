@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/lib/hooks/use-toast";
 import { ConfigurationAdapter, Draft, HistoryItem, ValidationResult } from "@/features/configuration/adapters/configuration-adapter";
+import { JsonObject } from "@/features/configuration/domain/entities";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { VERSION as REQUIRED_VERSION } from "@talosprotocol/contracts";
@@ -13,6 +14,16 @@ import { CONFIG_TEMPLATES, Template } from "@/features/configuration/templates";
 import { AgentChat } from "@/features/agent/AgentChat";
 import { Button } from "@/components/ui/button";
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function asJsonObject(value: unknown): JsonObject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Configuration must be a YAML object");
+  }
+  return value as JsonObject;
+}
 
 export default function ConfigurationPage() {
   const [adapter] = useState(() => new ConfigurationAdapter());
@@ -34,43 +45,46 @@ export default function ConfigurationPage() {
     try {
       // Use efficient bootstrap endpoint (C5: Optimization & C3: Version Gate)
       const data = await adapter.getBootstrap();
+      const historyItems = data.history?.items ?? [];
       
       setContractsVersion(data.contracts_version);
-      setHistory(data.history?.items || []);
+      setHistory(historyItems);
       
       // If we have current config from bootstrap, use it
       if (data.current_config) {
-          setConfigText(yaml.dump(data.current_config));
-      } else if (data.history?.items?.length > 0 && !configText) {
+          setConfigText((current) => current || yaml.dump(data.current_config));
+      } else if (historyItems.length > 0) {
           // Fallback if current_config missing but history exists
           try {
-             const latest = JSON.parse(data.history.items[0].config_json);
-             setConfigText(yaml.dump(latest));
-          } catch(e) { console.error(e); }
+             const latest = asJsonObject(JSON.parse(historyItems[0].config_json) as unknown);
+             setConfigText((current) => current || yaml.dump(latest));
+          } catch (error) {
+            console.error(error);
+          }
       }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error);
       // Check for Version Gate 409 (C3)
       if (msg.includes("Version mismatch") || msg.includes("CONTRACTS_VERSION_MISMATCH")) {
           setVersionMismatch(true);
       }
       setError(msg);
     }
-  }, [adapter, configText]);
+  }, [adapter]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   async function handleValidate() {
     setIsLoading(true);
     setValidationResult(null);
     try {
-      const parsed = yaml.load(configText);
+      const parsed = asJsonObject(yaml.load(configText));
       const res = await adapter.validate(parsed);
       setValidationResult(res);
-    } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+    } catch (error: unknown) {
+        const msg = getErrorMessage(error);
       setValidationResult({ valid: false, errors: [msg] });
     } finally {
       setIsLoading(false);
@@ -81,7 +95,7 @@ export default function ConfigurationPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const parsed = yaml.load(configText);
+      const parsed = asJsonObject(yaml.load(configText));
       const res = await adapter.createDraft(parsed, "Draft via Dashboard", PRINCIPAL_ID);
       setDraft(res);
       toast({
@@ -89,8 +103,8 @@ export default function ConfigurationPage() {
           description: "New configuration draft has been staged for authorization.",
           variant: "success"
       });
-    } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+    } catch (error: unknown) {
+        const msg = getErrorMessage(error);
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -109,9 +123,9 @@ export default function ConfigurationPage() {
           variant: "success"
       });
       setDraft(null);
-      loadData(); // Refresh history
-    } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+      void loadData(); // Refresh history
+    } catch (error: unknown) {
+        const msg = getErrorMessage(error);
       setError(msg);
     } finally {
       setIsLoading(false);
@@ -328,7 +342,7 @@ export default function ConfigurationPage() {
                         setIsLoading(true);
                         try {
                             // Validation Gate
-                            const parsed = yaml.load(code);
+                            const parsed = asJsonObject(yaml.load(code));
                             const res = await adapter.validate(parsed);
                             
                             if (!res.valid) {

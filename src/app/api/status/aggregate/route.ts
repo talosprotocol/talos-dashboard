@@ -49,7 +49,7 @@ const SERVICES = [
   },
   {
     name: "audit",
-    url: process.env.TALOS_AUDIT_URL ?? "http://localhost:8081",
+    url: process.env.TALOS_AUDIT_URL ?? "http://localhost:8002",
     endpoint: "/health",
   },
   {

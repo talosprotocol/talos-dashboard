@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { verifySetupGates, SecurityGateError } from '@/lib/setup-gate';
-// import { auth } from '@/auth'; // Assuming next-auth setup is standard, placeholder for now
+import { verifySetupAccess, SecurityGateError } from '@/lib/setup-gate';
 
 import { db } from '@/db';
 import { pairingTokens } from '@/db/schema';
@@ -9,10 +8,8 @@ import crypto from 'crypto';
 
 export async function POST() {
   try {
-    // 1. Enforce Hard Gates
-    verifySetupGates();
-
-    // 2. Auth Check (Admin Only) - TODO: Add session verification
+    // 1. Enforce Hard Gates and Admin Auth
+    await verifySetupAccess();
 
     // 3. Generate Token
     const token = "talos_pairing_" + crypto.randomUUID();

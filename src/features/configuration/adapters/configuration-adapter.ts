@@ -1,4 +1,10 @@
+import { JsonObject } from "../domain/entities";
 
+type ErrorResponse = {
+  detail?: string;
+  error?: string;
+  message?: string;
+};
 
 
 export interface ValidationResult {
@@ -7,14 +13,14 @@ export interface ValidationResult {
 }
 
 export interface NormalizeResult {
-  config: any;
+  config: JsonObject;
   digest: string;
 }
 
 export interface Draft {
   draft_id: string;
   config_digest: string;
-  config: any;
+  config: JsonObject;
   note?: string;
   created_at: string;
   principal: string;
@@ -32,6 +38,23 @@ export interface HistoryItem {
 export interface ContractsVersion {
     contracts_version: string;
     config_version_supported: string[];
+}
+
+export interface HistoryPage {
+  items: HistoryItem[];
+  next_cursor?: string | null;
+}
+
+export interface BootstrapResponse {
+  contracts_version: string;
+  config_version_supported: string | string[];
+  schema?: unknown;
+  config_digest?: string | null;
+  active_config_id?: string | null;
+  current_config?: JsonObject | null;
+  history?: HistoryPage | null;
+  health?: unknown;
+  feature_flags?: Record<string, boolean>;
 }
 
 export class ConfigurationAdapter {
@@ -53,7 +76,7 @@ export class ConfigurationAdapter {
     return res.json();
   }
 
-  async validate(config: unknown): Promise<ValidationResult> {
+  async validate(config: JsonObject): Promise<ValidationResult> {
     const res = await fetch(`${this.baseUrl}/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,7 +89,7 @@ export class ConfigurationAdapter {
     return { valid: res.ok };
   }
 
-  async normalize(config: unknown): Promise<NormalizeResult> {
+  async normalize(config: JsonObject): Promise<NormalizeResult> {
     const res = await fetch(`${this.baseUrl}/normalize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -76,7 +99,7 @@ export class ConfigurationAdapter {
     return res.json();
   }
 
-  async createDraft(config: unknown, note: string, principal: string): Promise<Draft> {
+  async createDraft(config: JsonObject, note: string, principal: string): Promise<Draft> {
     // Generate a robust idempotency key
     const idemKey = crypto.randomUUID();
     
@@ -91,8 +114,8 @@ export class ConfigurationAdapter {
     });
     
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Failed to create draft');
+        const err = await res.json().catch(() => null) as ErrorResponse | null;
+        throw new Error(err?.detail || 'Failed to create draft');
     }
     return res.json();
   }
@@ -110,13 +133,13 @@ export class ConfigurationAdapter {
     });
 
     if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Failed to publish draft');
+        const err = await res.json().catch(() => null) as ErrorResponse | null;
+        throw new Error(err?.detail || 'Failed to publish draft');
     }
     return res.json();
   }
 
-  async getHistory(limit: number = 10, cursor?: string): Promise<{ items: HistoryItem[], next_cursor: string }> {
+  async getHistory(limit: number = 10, cursor?: string): Promise<HistoryPage> {
       let url = `${this.baseUrl}/history?limit=${limit}`;
       if (cursor) url += `&cursor=${cursor}`;
       
@@ -124,11 +147,11 @@ export class ConfigurationAdapter {
       if (!res.ok) throw new Error("Failed to fetch history");
       return res.json();
   }
-  async getBootstrap(): Promise<any> {
+  async getBootstrap(): Promise<BootstrapResponse> {
       const res = await fetch(`${this.baseUrl}/ui-bootstrap`);
       if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.message || body.error || `Bootstrap failed: ${res.status}`);
+          const body = await res.json().catch(() => null) as ErrorResponse | null;
+          throw new Error(body?.message || body?.error || `Bootstrap failed: ${res.status}`);
       }
       return res.json();
   }

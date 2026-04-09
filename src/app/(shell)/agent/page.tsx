@@ -26,6 +26,7 @@ export default function AgentPage() {
     const [isStreaming, setIsStreaming] = useState(false);
     const [capabilities, setCapabilities] = useState<Capability[]>([]);
     const [tools, setTools] = useState<Tool[]>([]);
+    const [conversationId, setConversationId] = useState("demo-session-v1");
     
     // Refs for streaming
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -34,19 +35,16 @@ export default function AgentPage() {
     // Initial Load & Session
     useEffect(() => {
         // Restore or Create Conversation based on principle
-        // Mock principal - in real app, fetch from /api/auth/session or prop
         const principalId = "user_principal_01"; 
         const storageKey = `talos_conversation_${principalId}`;
         
         const existing = sessionStorage.getItem(storageKey);
         if (existing) {
-             // setConversationId(existing);
-             // In real app, might fetch history here
+             setConversationId(existing);
         } else {
-             // UUIDv7 is preferred, fallback to random
              const newId = crypto.randomUUID();
              sessionStorage.setItem(storageKey, newId);
-             // setConversationId(newId);
+             setConversationId(newId);
         }
 
         // Fetch tools (mock capability discovery)
@@ -86,6 +84,7 @@ export default function AgentPage() {
                 body: JSON.stringify({
                     model: "llama3", // Default for now
                     messages: [...messages, userMsg],
+                    session_id: conversationId,
                     client_requested_caps: capabilities
                 }),
                 signal: ac.signal

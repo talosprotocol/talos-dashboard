@@ -9,7 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth/session";
-// import { getServerSession } from "next-auth"; // Uncomment when auth is configured
+import { AUTH_ADMIN_SECRET } from "@/lib/config";
+import { signAdminJwt } from "@/lib/auth/utils";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // Required for streaming
@@ -29,12 +30,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Auth Check (bypass in dev mode)
   // ---------------------------------------------
   const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
-  
+  let sessionData;
+
   if (!isDevMode) {
-    const sessionData = await validateRequest();
+    sessionData = await validateRequest();
     if (!sessionData) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } else {
+    sessionData = { user: { id: 'dev-user', role: 'admin' } };
   }
 
   // ---------------------------------------------
@@ -49,9 +53,27 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   try {
     // ---------------------------------------------
+      const headers: HeadersInit = { 
+        "Accept": "text/event-stream" 
+      };
+
+      if (sessionData?.user) {
+        const principalId = sessionData.user.id;
+        headers['X-Talos-Principal-Id'] = principalId;
+        
+        // Generate Admin JWT for the Audit service
+        const token = signAdminJwt({
+          sub: principalId,
+          role: sessionData.user.role || 'user',
+          exp: Math.floor(Date.now() / 1000) + 300 // 5 min expiry
+        }, AUTH_ADMIN_SECRET);
+        
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const upstream = await fetch(`${AUDIT_URL}/events`, {
         method: "GET",
-        headers: { "Accept": "text/event-stream" },
+        headers,
         signal: req.signal,
       });
 

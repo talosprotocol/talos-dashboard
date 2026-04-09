@@ -1,96 +1,84 @@
 # Talos Security Dashboard
 
-**Repo Role**: Visualization and management UI for the Talos Network state and audit logs.
+The dashboard is the Next.js operator console for Talos. It combines audit/event views, gateway and service status, configuration and secrets surfaces, setup-helper workflows, and interactive example pages behind a passkey-first auth boundary.
 
-## Abstract
+## Current Scope
 
-The Talos Dashboard provides a human-readable interface into the complex state of the autonomous agent network. It visualizes network topology, message flows, and audit logs, allowing operators to monitor system health and compliance.
+- App Router UI under `src/app`
+- Server-side proxy routes under `src/app/api`
+- WebAuthn bootstrap/login plus signed session cookies
+- Postgres-backed auth and setup state via Drizzle
+- Operator pages for console, audit, status, setup, gateway, configuration, sessions, agent, and examples
 
-## Introduction
+## Runtime Model
 
-While Talos is designed for agents, humans need visibility. The Dashboard aggregates data from the Audit Service and Gateway metrics to provide a real-time operational picture.
+The local dev path starts the dashboard in HTTP mode and points the browser at a Talos gateway/API base URL.
 
-## System Architecture
+Key environment variables:
 
-```mermaid
-graph TD
-    User[Operator] -->|Browser| UI[React App]
-    UI -->|API| Gateway[Talos Gateway]
-    UI -->|API| Audit[Audit Service]
-```
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Client-side API base for HTTP mode |
+| `TALOS_GATEWAY_URL` | `http://localhost:8000` | Server-side gateway health/control plane proxy |
+| `TALOS_AUDIT_URL` | `http://localhost:8001` | Audit/event proxy target |
+| `TALOS_CONNECTOR_URL` | `http://localhost:8082` | MCP resource proxy target |
+| `TALOS_CHAT_URL` | `http://localhost:8100` | Secure chat example backend |
+| `TALOS_AIOPS_URL` | `http://localhost:8200` | DevOps example backend |
+| `APP_ORIGIN` | `http://localhost:3000` | Server-side origin checks for WebAuthn |
+| `NEXT_PUBLIC_APP_ORIGIN` | `http://localhost:3000` | Browser origin for auth flows |
+| `NEXT_PUBLIC_RP_ID` | `localhost` | WebAuthn relying party ID |
+| `AUTH_SECRET` | unset by default | Required by setup/security gates |
+| `AUTH_COOKIE_HMAC_SECRET` | unset by default | Required for signed session cookies |
+| `TALOS_BOOTSTRAP_TOKEN` | unset by default | Required for first-device admin bootstrap |
+| `DATABASE_URL` | `postgres://postgres:password@localhost:5432/talos` fallback in code | Postgres for auth/setup persistence |
 
-## Technical Design
+Auth and setup flows are stateful. The dashboard uses Postgres-backed `users`, `authenticators`, `webauthn_challenges`, `sessions`, `setup_agents`, `setup_jobs`, and `pairing_tokens` tables defined in `src/db/schema.ts`.
 
-### Modules
+## Local Development
 
-- **frontend**: React/Vite application.
-- **viz**: D3/Recharts visualizations.
-
-### Data Formats
-
-- **API**: Consumes Gateway and Audit Service APIs.
-
-## Evaluation
-
-Evaluation: N/A for this repo.
-
-## Configuration
-
-The dashboard is configured via environment variables (or `.env.local`):
-
-| Variable            | Default                 | Description                   |
-| ------------------- | ----------------------- | ----------------------------- |
-| `TALOS_GATEWAY_URL` | `http://localhost:8000` | URL of the main Talos Gateway |
-| `TALOS_CHAT_URL`    | `http://localhost:8100` | URL of the Secure Chat Agent  |
-| `TALOS_AIOPS_URL`   | `http://localhost:8200` | URL of the DevOps Agent       |
-
-## Usage
-
-### Quickstart
+Minimal local start:
 
 ```bash
+npm ci
+npm run db:migrate
 npm run dev
-# Open http://localhost:3000
-# You will be redirected to the Login page.
+```
 
-## Authentication
+The dashboard persists auth and setup state in Postgres. Before the first passkey/bootstrap run, point `DATABASE_URL` at a reachable Postgres instance and apply the checked-in Drizzle migrations with `npm run db:migrate`. Use `npm run db:generate` only when the schema changes and a new migration needs to be created.
 
-The dashboard is secured with NextAuth v5.
+Repo-owned helper:
 
-**Default Credentials:**
-- **Email:** `admin@talos.security`
-- **Password:** `talos_secure_start`
+```bash
+bash scripts/start.sh
+```
 
-**Configuration:**
-Set the following environment variables in `.env.local` to override defaults:
-- `ADMIN_EMAIL`
-- `ADMIN_PASSWORD`
-- `AUTH_SECRET` (Required for production security)
+Primary verification path:
 
+```bash
+bash scripts/test.sh
+```
 
-## Operational Interface
+## Auth Model
 
-- `npm test`: Run frontend tests.
-- `scripts/test.sh`: CI entrypoint.
+The dashboard no longer uses NextAuth. The live auth path is:
 
-## Security Considerations
+1. WebAuthn bootstrap or login via `src/app/api/auth/webauthn/*`
+2. Signed session cookies validated in `src/middleware.ts`
+3. DB-backed session and authenticator state in `src/db/schema.ts`
 
-- **Threat Model**: Unauthorized access to dashboard.
-- **Guarantees**:
-  - **Read-Only**: Dashboard is primarily a read-only viewer (depending on config).
+The visible `/signup` page is not a full production registration flow; the supported bootstrap path is the passkey/device flow on `/login`.
+
+## Health Endpoints
+
+- `/healthz`: process liveness
+- `/readyz`: config plus database readiness
+- `/version`: build metadata
+- `/metrics`: Prometheus-style health metrics
 
 ## References
 
-1.  [Talos Audit Service](https://github.com/talosprotocol/talos-audit-service)
-2.  [Security Dashboard](https://github.com/talosprotocol/talos/wiki/Security-Dashboard)
-
-## License
-
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
-
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
-
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
-
-Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
-```
+- [Wiki Home](docs/wiki/Home.md)
+- [Architecture](docs/wiki/Architecture.md)
+- [Development](docs/wiki/Development.md)
+- [Features](docs/wiki/Features.md)
+- [API](docs/wiki/API.md)

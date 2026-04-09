@@ -7,11 +7,13 @@ import { useMemo, useState } from "react";
 import { useToast } from "@/lib/hooks/use-toast";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { computeSuspiciousScore } from "@/lib/analysis/scoring";
 import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
 
-export default function SessionDetailPage({ params }: { params: { id: string } }) {
+export default function SessionDetailPage() {
     const { events } = useDataSource();
+    const params = useParams<{ id: string }>();
     const sessionId = params.id;
     const [isExporting, setIsExporting] = useState(false);
     const { toast } = useToast();

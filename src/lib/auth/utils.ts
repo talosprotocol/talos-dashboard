@@ -37,3 +37,17 @@ export function hmac(secret: Buffer, input: string | Buffer): Buffer {
 export function generateRandomBytes(length: number): Buffer {
     return randomBytes(length);
 }
+
+/**
+ * Generates an HS256 JWT signed with AUTH_ADMIN_SECRET for internal admin proxy auth.
+ */
+export function signAdminJwt(payload: object, secret: string): string {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const jsonEncode = (obj: object) => JSON.stringify(obj);
+    
+    const b64Header = bytesToB64url(Buffer.from(jsonEncode(header)));
+    const b64Payload = bytesToB64url(Buffer.from(jsonEncode(payload)));
+    
+    const signature = hmac(Buffer.from(secret), `${b64Header}.${b64Payload}`);
+    return `${b64Header}.${b64Payload}.${bytesToB64url(signature)}`;
+}

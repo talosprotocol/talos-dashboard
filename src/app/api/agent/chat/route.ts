@@ -34,14 +34,17 @@ export async function POST(req: NextRequest) {
         // if (!validModels.includes(body.model)) ... (Skipping strict check for demo stability, but noting implementation)
 
         // 3. Connect to Upstream
-        const upstreamResponse = await fetch(`${AGENT_URL}/v1/chat`, {
+        const upstreamResponse = await fetch(`${AGENT_URL}/v1/chat/send`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-Talos-Principal": sessionData.user.id,
                 "X-Talos-Role": (sessionData.user as { role: string }).role || 'user'
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({
+                message: body.messages[body.messages.length - 1].content,
+                session_id: body.session_id || "demo-session-v1"
+            }),
             signal: req.signal, 
         });
 
@@ -53,61 +56,20 @@ export async function POST(req: NextRequest) {
              );
         }
 
-        if (!upstreamResponse.body) {
-            return new Response("No body from agent", { status: 502 });
-        }
+        const data = await upstreamResponse.json();
+        const responseText = data.response || "";
 
-        // 4. Meta-First Enforcement (Buffer first event)
-        const reader = upstreamResponse.body.getReader();
+        // 4. Wrap JSON response into SSE for frontend compatibility
         const encoder = new TextEncoder();
-        
-        // We create a new ReadableStream that buffers the first event, validates it, then releases it + the rest
         const stream = new ReadableStream({
-            async start(controller) {
-                const decoder = new TextDecoder();
-                let buffer = "";
-                let metaValidated = false;
-
-                try {
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-
-                        if (!metaValidated) {
-                            buffer += decoder.decode(value, { stream: true });
-                            const eventEndIndex = buffer.indexOf("\n\n");
-                            
-                            if (eventEndIndex !== -1) {
-                                // Extract first event
-                                const firstChunk = buffer.substring(0, eventEndIndex + 2);
-                                const remaining = buffer.substring(eventEndIndex + 2);
-                                
-                                // Check if it contains "event: meta"
-                                if (!firstChunk.includes("event: meta")) {
-                                    controller.error(new Error("Protocol Error: First event must be meta"));
-                                    return; // Stop stream
-                                }
-                                
-                                // Valid meta, push first chunk
-                                controller.enqueue(encoder.encode(firstChunk));
-                                
-                                // Push any remaining bytes from the buffer
-                                if (remaining) {
-                                    controller.enqueue(encoder.encode(remaining));
-                                }
-                                
-                                metaValidated = true;
-                            }
-                            // Continue reading until we find the first event boundary
-                        } else {
-                            // Already validated, just passthrough
-                            controller.enqueue(value);
-                        }
-                    }
-                    controller.close();
-                } catch (e) {
-                    controller.error(e);
-                }
+            start(controller) {
+                // Send meta event
+                controller.enqueue(encoder.encode(`event: meta\ndata: ${JSON.stringify({ secure: data.secure, message_id: data.message_id })}\n\n`));
+                
+                // Send content as token event
+                controller.enqueue(encoder.encode(`event: token\ndata: ${JSON.stringify({ content: responseText })}\n\n`));
+                
+                controller.close();
             }
         });
 

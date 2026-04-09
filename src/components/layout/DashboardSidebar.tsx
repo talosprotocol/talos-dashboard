@@ -2,41 +2,26 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, BarChart3, Settings, FileText, Activity } from 'lucide-react';
+import { Shield, BarChart3, Settings, FileText, Activity, Terminal, LayoutDashboard, Database, Lock, Play, Zap, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getNavItems, isActiveRoute } from '@/lib/navRegistry';
 
-const navItems = [
-  {
-    title: 'Dashboard',
-    href: '/',
-    icon: BarChart3,
-  },
-  {
-    title: 'Audit Explorer',
-    href: '/audit',
-    icon: Shield,
-  },
-  {
-    title: 'System Status',
-    href: '/status',
-    icon: Activity,
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-  },
-  {
-    title: 'Configuration',
-    href: '/configuration',
-    icon: Settings, // Reusing Settings for now, or import Sliders
-  },
-  {
-    title: 'Docs',
-    href: '/docs',
-    icon: FileText,
-  },
-];
+const ICON_MAP: Record<string, LucideIcon> = {
+  "📊": LayoutDashboard,
+  "🔌": Activity,
+  "☁️": Database,
+  "🧠": Zap,
+  "🎮": Play,
+  "🛠️": Terminal,
+  "🛡️": Shield,
+  "📜": FileText,
+  "⚙️": Settings,
+  "🔐": Lock,
+  "🧪": Terminal,
+  "💬": Activity,
+  "📈": BarChart3,
+  "🚀": Zap,
+};
 
 interface DashboardSidebarProps {
   isOpen?: boolean;
@@ -45,6 +30,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const navItems = getNavItems();
 
   return (
     <>
@@ -67,30 +53,30 @@ export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarPro
           <div className="px-3 py-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-2 opacity-70">
               Platform
           </div>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href;
+          {navItems.map(({ href, item }) => {
+            const Icon = ICON_MAP[item.icon] || Terminal;
+            const active = isActiveRoute(pathname, href);
             
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={href}
+                href={href}
                 onClick={(e) => {
-                   if (item.href === pathname) e.preventDefault();
+                   if (href === pathname) e.preventDefault();
                    onClose?.();
                 }}
                 className={cn(
                   'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 relative overflow-hidden',
-                  isActive
+                  active
                     ? 'text-white bg-indigo-500/10 shadow-[0_0_20px_rgba(79,70,229,0.15)] border border-indigo-500/20'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                 )}
               >
-                {isActive && (
+                {active && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 rounded-r-full" />
                 )}
-                <Icon className={cn("h-4 w-4 shrink-0 transition-colors", isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300")} />
-                <span>{item.title}</span>
+                <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300")} />
+                <span>{item.label}</span>
               </Link>
             );
           })}

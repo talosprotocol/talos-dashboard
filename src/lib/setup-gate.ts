@@ -1,3 +1,4 @@
+import { validateRequest } from '@/lib/auth/session';
 
 export class SecurityGateError extends Error {
   constructor(public code: string, message: string) {
@@ -29,4 +30,18 @@ export function verifySetupGates() {
   // This helper just validates the static configuration gates.
   
   return true;
+}
+
+export async function verifySetupAccess() {
+  verifySetupGates();
+  const sessionData = await validateRequest();
+  
+  if (!sessionData || sessionData.user.role !== 'admin') {
+    throw new SecurityGateError(
+      'UNAUTHORIZED',
+      'Setup is disabled: Admin session required.'
+    );
+  }
+  
+  return sessionData;
 }

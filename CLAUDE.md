@@ -7,17 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a submodule of the [Talos Protocol](https://github.com/talosprotocol/talos) multi-repository project.
 
 Main repository: https://github.com/talosprotocol/talos
-Documentation: https://github.com/talosprotocol/talos-docs
+Primary docs in this workspace: `docs/` and `site/dashboard/docs/wiki/`
 
 ## About This Component
 
-This submodule contains the Next.js-based security console UI for the Talos Protocol. It serves as the visualization and management interface for the Talos Network state and audit logs. The dashboard provides operators with a human-readable interface into the complex state of the autonomous agent network, visualizing network topology, message flows, and audit logs.
+This package contains the Next.js-based operator console for Talos. It owns the authenticated shell UI, dashboard-owned `/api/*` proxy routes, passkey bootstrap/login, and Postgres-backed auth/setup state.
 
 Key features include:
-- Real-time visualization of network topology and message flows
-- Audit log monitoring and analysis
-- Integration with Gateway metrics for system health monitoring
-- Secure authentication via NextAuth v5
+- Audit/event exploration and live status surfaces
+- Setup-helper pairing and job orchestration
+- Configuration, secrets, gateway, session, and example pages
+- Secure authentication via WebAuthn plus signed session cookies
 
 ## Development Workflow
 
@@ -31,7 +31,7 @@ Standard Talos development practices apply:
 
 To run the dashboard locally:
 ```bash
-npm run dev
+bash scripts/start.sh
 # Open http://localhost:3000
 ```
 
@@ -67,8 +67,15 @@ This component integrates with:
 
 Environment variables for configuration:
 - `TALOS_GATEWAY_URL`: URL of the main Talos Gateway (default: http://localhost:8000)
+- `TALOS_AUDIT_URL`: URL of the audit service (default: http://localhost:8001)
+- `TALOS_CONNECTOR_URL`: URL of the MCP connector (default: http://localhost:8082)
 - `TALOS_CHAT_URL`: URL of the Secure Chat Agent (default: http://localhost:8100)
 - `TALOS_AIOPS_URL`: URL of the DevOps Agent (default: http://localhost:8200)
+- `APP_ORIGIN` / `NEXT_PUBLIC_APP_ORIGIN`: required for WebAuthn origin checks
+- `NEXT_PUBLIC_RP_ID`: relying-party id for passkeys
+- `AUTH_COOKIE_HMAC_SECRET`: required for signed session cookies
+- `TALOS_BOOTSTRAP_TOKEN`: required for initial admin-device bootstrap
+- `DATABASE_URL`: Postgres for auth/setup state
 
 ## Testing
 

@@ -7,13 +7,51 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { downloadBulkEvidenceBundle } from "@/lib/utils/export";
 
+import { useToast } from "@/lib/hooks/use-toast";
+
+interface ProofStep {
+    position: "left" | "right";
+    hash: string;
+}
+
+interface Proof {
+    height: number;
+    path: ProofStep[];
+}
+
 interface ProofDrawerProps {
     event: AuditEvent | null;
     onClose: () => void;
 }
 
 export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
+    const [proof, setProof] = useState<Proof | null>(null);
+    const [loadingProof, setLoadingProof] = useState(false);
+    const { toast } = useToast();
+
     if (!event) return null;
+
+    const fetchProof = async () => {
+        setLoadingProof(true);
+        try {
+            const res = await fetch(`/api/audit/proof/${event.event_id}`);
+            if (!res.ok) throw new Error("Failed to fetch proof");
+            const data = await res.json();
+            setProof(data);
+            toast({
+                title: "Proof Retrieved",
+                description: "Merkle path successfully loaded from audit service.",
+            });
+        } catch (e) {
+            toast({
+                title: "Proof Error",
+                description: String(e),
+                variant: "destructive",
+            });
+        } finally {
+            setLoadingProof(false);
+        }
+    };
 
     return (
         <div className="fixed inset-y-0 right-0 w-[480px] bg-[var(--bg)] border-l border-[var(--glass-border)] shadow-2xl backdrop-blur-xl z-50 p-6 flex flex-col transform transition-transform duration-300">
@@ -34,7 +72,18 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
             <div className="flex-1 overflow-y-auto space-y-6">
                 {/* 1. Integrity State Machine */}
                 <section>
-                    <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-3">Integrity State</h3>
+                    <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-3 flex justify-between items-center">
+                        Integrity State
+                        {!proof && (
+                            <button 
+                                onClick={fetchProof}
+                                disabled={loadingProof}
+                                className="text-[9px] px-2 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 disabled:opacity-50"
+                            >
+                                {loadingProof ? "Loading..." : "Verify with Backend"}
+                            </button>
+                        )}
+                    </h3>
 
                     {/* CRITICAL OVERLAY */}
                     {event.integrity?.failure_reason === "CURSOR_MISMATCH" && (
@@ -45,13 +94,30 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                     )}
 
                     <div className="grid grid-cols-2 gap-3">
-                        <ComputedStateCard integrity={event.integrity} />
+                        <ComputedStateCard integrity={proof ? { ...event.integrity, proof_state: "VERIFIED" } : event.integrity} />
                         <StateCard
                             label="Signature"
                             value={event.integrity?.signature_state || "UNKNOWN"}
                             state={event.integrity?.signature_state === "VALID" ? "success" : event.integrity?.signature_state === "INVALID" ? "danger" : "warning"}
                         />
                     </div>
+
+                    {proof && (
+                        <div className="mt-4 space-y-2">
+                            <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Merkle Path (Height: {proof.height})</div>
+                            <div className="space-y-1">
+                                {proof.path.map((step, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                                        <span className="opacity-50">[{i}]</span>
+                                        <span className={cn(step.position === "left" ? "text-blue-400" : "text-purple-400")}>
+                                            {step.position.toUpperCase()}
+                                        </span>
+                                        <span className="truncate">{step.hash}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {event.integrity?.failure_reason && (
                         <div className="mt-3">

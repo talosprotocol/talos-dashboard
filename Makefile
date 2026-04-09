@@ -1,7 +1,7 @@
 # talos-dashboard Makefile
 # Next.js Security Console
 
-.PHONY: install build test lint clean start stop status
+.PHONY: install build test lint clean start stop status db-generate db-migrate db-push db-studio
 
 SERVICE_NAME := talos-dashboard
 PID_FILE := /tmp/$(SERVICE_NAME).pid
@@ -25,6 +25,22 @@ lint:
 	@echo "Running lint..."
 	npm run lint
 	npm run typecheck
+
+db-generate:
+	@echo "Generating Drizzle migration files..."
+	npm run db:generate
+
+db-migrate:
+	@echo "Applying Drizzle migrations..."
+	npm run db:migrate
+
+db-push:
+	@echo "Pushing schema directly with Drizzle..."
+	npm run db:push
+
+db-studio:
+	@echo "Starting Drizzle Studio..."
+	npm run db:studio
 
 start:
 	@echo "Starting $(SERVICE_NAME)..."

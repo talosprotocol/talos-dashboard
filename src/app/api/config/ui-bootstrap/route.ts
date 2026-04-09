@@ -1,5 +1,5 @@
 import { validateRequest } from "@/lib/auth/session";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { VERSION as CLIENT_CONTRACTS_VERSION } from "@talosprotocol/contracts";
 import { DATA_SOURCE_MODE } from "@/lib/config";
 
@@ -7,7 +7,11 @@ const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8000";
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+export async function GET() {
   // Mock Mode Support
   if (DATA_SOURCE_MODE === 'MOCK') {
       return NextResponse.json({
@@ -28,7 +32,7 @@ export async function GET(req: NextRequest) {
   }
 
   // C2: Strict Principal Identity
-  const principalId = sessionData.user?.id || (sessionData.user as any)?.email || "dev";
+  const principalId = sessionData.user?.id || sessionData.user?.email || "dev";
 
   try {
     // Parallel fetch for speed
@@ -86,8 +90,11 @@ export async function GET(req: NextRequest) {
         }
     });
 
-  } catch (e: any) {
-    console.error("Bootstrap error:", e);
-    return NextResponse.json({ error: "Backend Connection Failed", details: e.message }, { status: 502 });
+  } catch (error) {
+    console.error("Bootstrap error:", error);
+    return NextResponse.json(
+      { error: "Backend Connection Failed", details: getErrorMessage(error) },
+      { status: 502 },
+    );
   }
 }

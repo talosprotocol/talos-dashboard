@@ -21,6 +21,7 @@ interface Example {
     description: string;
     route: string;
     status: ExampleStatus;
+    features?: string[];
     backend: {
         type: "http";
         env: string;
@@ -33,6 +34,7 @@ interface ManifestResponse {
     version: string;
     examples: Example[];
     timestamp: number;
+    source_path?: string;
     code?: string;
 }
 
@@ -101,7 +103,7 @@ export default function ExamplesPage() {
                         Failed to load examples manifest: <code>{error}</code>
                     </p>
                     <p className="text-[var(--text-muted)] text-xs mt-2">
-                        Ensure submodules are initialized: <code>git submodule update --init</code>
+                        Ensure the canonical contracts manifest is present at <code>contracts/examples_manifest.json</code>.
                     </p>
                 </GlassPanel>
             )}

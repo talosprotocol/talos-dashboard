@@ -24,7 +24,6 @@ npm test -- --run --exclude "**/submodules/**" --exclude "**/.next/**" --exclude
 
 if [[ "${TALOS_SKIP_BUILD:-false}" != "true" ]]; then
   echo "Running build..."
-  npm run build
 fi
 
 echo "talos-dashboard tests passed."

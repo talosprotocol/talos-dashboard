@@ -1,8 +1,9 @@
 import { db } from '@/db';
-import { setupJobs } from '@/db/schema';
+import { setupJobs, setupAgents } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { verifySetupGates } from '@/lib/setup-gate';
+import { verifySetupGates, SecurityGateError } from '@/lib/setup-gate';
+import crypto from 'crypto';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -10,9 +11,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         const { id: agentId } = await params;
         
         // 1. Verify Agent Auth
-        // In real impl, check Bearer token hash against setupAgents table
-        // const authHeader = req.headers.get('Authorization'); 
-        // ... verify logic ...
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+             return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 });
+        }
+        
+        const token = authHeader.substring(7);
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        
+        const [agent] = await db.select().from(setupAgents)
+            .where(eq(setupAgents.id, agentId))
+            .limit(1);
+            
+        if (!agent || agent.secretHash !== tokenHash) {
+             return NextResponse.json({ error: 'Unauthorized: Invalid agent secret' }, { status: 401 });
+        }
+
+        // Update last seen
+        await db.update(setupAgents)
+            .set({ lastSeenAt: new Date() })
+            .where(eq(setupAgents.id, agentId));
 
         // 2. Find and Lease Job (Atomic-ish for now, easy with Drizzle transaction if needed)
         // Simple implementation: Find first queued job for this agent
@@ -49,6 +67,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         });
 
     } catch (e) {
+        if (e instanceof SecurityGateError) {
+             return NextResponse.json({ error: e.message, code: e.code }, { status: 403 });
+        }
         console.error("Poll error:", e);
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }

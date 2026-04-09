@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { TalosLogo } from '@/components/ui/TalosLogo'
 import { GlassPanel } from '@/components/ui/GlassPanel'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -40,76 +40,74 @@ export default function SignupPage() {
           <div className="flex flex-col items-center space-y-2">
             <TalosLogo width={48} height={48} />
             <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-              Create an account
+              Secure Onboarding
             </h1>
             <p className="text-sm text-[var(--text-muted)]">
-              Enter your email below to create your account
+              Initialize your admin account with Passkeys
             </p>
           </div>
 
           {success ? (
             <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center animate-in fade-in zoom-in duration-300">
                <div className="w-12 h-12 rounded-full bg-[var(--success-glow)] flex items-center justify-center text-[var(--success)]">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-</svg>
+                  <Shield className="w-6 h-6" />
                </div>
                <div className="space-y-2">
-                 <h3 className="text-lg font-medium text-[var(--text-primary)]">Account verified</h3>
+                 <h3 className="text-lg font-medium text-[var(--text-primary)]">Device Registered</h3>
                  <p className="text-sm text-[var(--text-muted)]">
-                    This is a mock signup. Redirecting you to login...
+                    Your passkey has been linked to the Postgres security store.
                     <br/>
-                    (Please use the default admin credentials)
+                    Redirecting to login...
                  </p>
                </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="w-full space-y-4">
-            <div className="space-y-4">
-               <div className="space-y-2">
-                 <label className="text-sm font-medium leading-none text-[var(--text-secondary)]" htmlFor="email">
-                   Email Address
-                 </label>
-                 <input
-                   className="flex h-10 w-full rounded-md border border-[var(--glass-border)] bg-black/20 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] text-[var(--text-primary)]"
-                   id="email"
-                   type="email"
-                   required
-                 />
-               </div>
-               <div className="space-y-2">
-                 <label className="text-sm font-medium leading-none text-[var(--text-secondary)]" htmlFor="password">
-                   Password
-                 </label>
-                 <input
-                   className="flex h-10 w-full rounded-md border border-[var(--glass-border)] bg-black/20 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] text-[var(--text-primary)]"
-                   id="password"
-                   type="password"
-                   required
-                 />
-               </div>
-               <div className="space-y-2">
-                 <label className="text-sm font-medium leading-none text-[var(--text-secondary)]" htmlFor="confirm">
-                   Confirm Password
-                 </label>
-                 <input
-                   className="flex h-10 w-full rounded-md border border-[var(--glass-border)] bg-black/20 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] text-[var(--text-primary)]"
-                   id="confirm"
-                   type="password"
-                   required
-                 />
-               </div>
-            </div>
+            <div className="w-full space-y-6">
+                <div className="p-4 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+                    <strong>Note:</strong> Talos uses WebAuthn for first-class security. 
+                    Ensure your <code>DATABASE_URL</code> is configured for persistence.
+                </div>
 
-            <button
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 bg-[var(--text-primary)] text-[var(--bg)] hover:bg-[var(--text-primary)]/90 h-10 px-4 py-2 w-full"
-              type="submit"
-              disabled={isPending}
-            >
-              {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="mr-2 h-4 w-4" />}
-              Sign Up
-            </button>
-          </form>
+                <button
+                    onClick={handleSubmit}
+                    className="inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 bg-[var(--accent)] text-white shadow-[0_0_20px_rgba(var(--accent-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.5)] h-12 px-4 py-2 w-full"
+                    disabled={isPending}
+                >
+                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}
+                    Register Passkey
+                </button>
+
+                <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-white/10" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-[var(--bg)] px-2 text-[var(--text-muted)]">Or legacy fallback</span>
+                    </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="w-full space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]" htmlFor="email">
+                            Email
+                        </label>
+                        <input
+                            className="flex h-10 w-full rounded-md border border-[var(--glass-border)] bg-black/20 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] text-[var(--text-primary)]"
+                            id="email"
+                            type="email"
+                            placeholder="admin@talosprotocol.com"
+                            required
+                        />
+                    </div>
+                    <button
+                        className="inline-flex items-center justify-center rounded-md text-xs font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 border border-white/10 hover:bg-white/5 h-10 px-4 py-2 w-full"
+                        type="submit"
+                        disabled={isPending}
+                    >
+                        Sign up with password
+                    </button>
+                </form>
+            </div>
           )}
 
           <div className="text-center text-sm text-[var(--text-muted)]">

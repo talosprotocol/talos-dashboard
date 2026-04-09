@@ -1,12 +1,11 @@
 import { db } from '@/db';
 import { setupJobs } from '@/db/schema';
 import { NextResponse } from 'next/server';
-import { verifySetupGates, SecurityGateError } from '@/lib/setup-gate';
+import { verifySetupAccess, SecurityGateError } from '@/lib/setup-gate';
 
 export async function POST(req: Request) {
     try {
-        verifySetupGates();
-        // TODO: Validate User Session (Auth)
+        await verifySetupAccess();
         
         const body = await req.json();
         const { recipe_id, args, agent_id } = body;

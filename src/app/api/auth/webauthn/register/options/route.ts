@@ -8,13 +8,13 @@ import { users, authenticators, webauthnChallenges } from '@/db/schema';
 import { count, eq } from 'drizzle-orm';
 import { validateRequest } from '@/lib/auth/session';
 import { headers } from 'next/headers';
-import { bytesToB64url } from '@/lib/auth/utils';
 
 const RP_NAME = 'Talos Dashboard';
 const RP_ID = process.env.NEXT_PUBLIC_RP_ID || 'localhost';
 const APP_ORIGIN = process.env.APP_ORIGIN!; // Enforced in env
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@talosprotocol.com';
 
-export async function POST(request: Request) {
+export async function POST() {
     if (!APP_ORIGIN) throw new Error('APP_ORIGIN not set');
 
     // 1. Strict Origin Check
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         
         // Create Admin User immediately
         const newUser = await db.insert(users).values({
-            email: 'admin@talos.security',
+            email: DEFAULT_ADMIN_EMAIL,
             role: 'admin',
         }).returning();
         

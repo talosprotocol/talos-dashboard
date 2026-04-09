@@ -4,7 +4,6 @@ import * as React from "react"
 import { ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 5
-const TOAST_REMOVE_DELAY = 1000000 // Infinite for manual dismiss by default or high value
 
 type ToasterToast = ToastProps
 

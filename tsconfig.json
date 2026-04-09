@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,17 +23,25 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@talosprotocol/contracts": ["../../contracts/typescript/src/index.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@talosprotocol/contracts": [
+        "../../contracts/typescript/src/index.ts"
+      ]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
     "**/*.mts",
+    ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "submodules", "scripts"]
+  "exclude": [
+    "node_modules",
+    "submodules",
+    "scripts"
+  ]
 }

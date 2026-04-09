@@ -2,9 +2,12 @@ import { createHmac, createHash, randomBytes } from "crypto";
 import pkg from "pg";
 const { Client } = pkg;
 
-const DATABASE_URL = 'postgresql://talos:talos_dev_password@localhost:5433/talos';
-const SECRET_B64 = "b64URLSecretPlaceholder";
+const DATABASE_URL =
+  process.env.DATABASE_URL || "postgres://postgres:password@localhost:5432/talos";
+const SECRET_B64 =
+  process.env.AUTH_COOKIE_HMAC_SECRET || "b64URLSecretPlaceholder";
 const _COOKIE_NAME = "talos.sid"; // Dev mode
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@talosprotocol.com";
 
 async function main() {
   const client = new Client({ connectionString: DATABASE_URL });
@@ -13,7 +16,8 @@ async function main() {
   try {
     // 1. Get Admin User
     const userRes = await client.query(
-      "SELECT id FROM users WHERE email = 'admin@talos.security'",
+      "SELECT id FROM users WHERE email = $1",
+      [ADMIN_EMAIL],
     );
     if (userRes.rowCount === 0) {
       console.error("Admin user not found!");

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import 'server-only';
 import { b64urlToBytes, bytesToB64url, generateRandomBytes, hmac, sha256 } from './utils';
-import { randomBytes, timingSafeEqual } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 
 const COOKIE_NAME = process.env.NODE_ENV === 'production' ? '__Host-talos.sid' : 'talos.sid';
 // Default 7 days
@@ -84,7 +84,6 @@ export async function validateRequest() {
     // 3. Verify Signature
     const payload = `v1.${expStr}.${tokenB64}`;
     const expectedSigBytes = hmac(secretBytes, payload);
-    const expectedSigB64 = bytesToB64url(expectedSigBytes);
     
     // Constant-time comparison
     const sigBytes = b64urlToBytes(sigB64);

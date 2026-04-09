@@ -1,7 +1,6 @@
 
 import { db } from '../src/db';
 import { users, authenticators, sessions, webauthnChallenges } from '../src/db/schema';
-import { sql } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 dotenv.config();
 

@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
+import { getReadinessReport } from '@/lib/health';
+
+export const runtime = 'nodejs';
 
 export async function GET() {
-  try {
-    // Verify env vars loaded
-    const config = {
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || '/api',
-      version: process.env.VERSION
-    };
-    return NextResponse.json({ status: 'ready', config });
-  } catch {
-    return NextResponse.json({ status: 'not ready' }, { status: 503 });
-  }
+  const report = await getReadinessReport();
+  return NextResponse.json(report, { status: report.status === 'ready' ? 200 : 503 });
 }

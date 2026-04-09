@@ -9,8 +9,9 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth/session";
-import { DATA_SOURCE_MODE, TALOS_AUDIT_URL } from "@/lib/config";
+import { DATA_SOURCE_MODE, TALOS_AUDIT_URL, AUTH_ADMIN_SECRET } from "@/lib/config";
 import { MockDataSource } from "@/lib/mockData";
+import { signAdminJwt } from "@/lib/auth/utils";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -101,8 +102,17 @@ export async function GET(req: NextRequest): Promise<Response> {
     };
 
     if (sessionData?.user) {
-        upstreamHeaders['X-Talos-Principal'] = sessionData.user.id;
-        upstreamHeaders['X-Talos-Role'] = sessionData.user.role || 'user';
+        const principalId = sessionData.user.id;
+        upstreamHeaders['X-Talos-Principal-Id'] = principalId;
+        
+        // Generate Admin JWT for the Audit service
+        const token = signAdminJwt({
+          sub: principalId,
+          role: sessionData.user.role || 'user',
+          exp: Math.floor(Date.now() / 1000) + 300 // 5 min expiry
+        }, AUTH_ADMIN_SECRET);
+        
+        upstreamHeaders['Authorization'] = `Bearer ${token}`;
     }
 
     // For now in dev mode, we can allow unauthenticated calls to audit service

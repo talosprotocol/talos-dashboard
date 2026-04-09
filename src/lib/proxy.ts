@@ -114,9 +114,7 @@ export async function createRecastRequest(
         principalId = (session.user as { email: string }).email;
     }
     if (!principalId) {
-         // Fallback for dev only if needed, but PR-1 says Strict.
-         if (process.env.NODE_ENV === 'development') principalId = 'dev-user';
-         else return new NextResponse("Forbidden: No Identity", { status: 403 });
+         return new NextResponse("Forbidden: No Identity", { status: 403 });
     }
 
     // 4. Upstream URL Construction
