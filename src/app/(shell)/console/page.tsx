@@ -19,8 +19,8 @@ import Link from "next/link";
  * - Request volume chart
  */
 export default function ConsolePage() {
-    const { stats, events, loading, hasMore, loadMore, loadingMore } =
-        useDataSource();
+    const { stats, events, loading, hasMore, loadMore, loadingMore } = useDataSource("LIVE");
+
 
     return (
         <div className="space-y-8">

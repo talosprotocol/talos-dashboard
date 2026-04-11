@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource, Secret } from "@/lib/data/DataSource";
@@ -8,6 +10,9 @@ import { Plus, Trash2, Key, Search, ShieldCheck } from "lucide-react";
 import { AdminModal } from "@/components/admin/AdminModal";
 
 export default function SecretsPage() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+
     const [secrets, setSecrets] = useState<Secret[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -29,7 +34,9 @@ export default function SecretsPage() {
         }
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { 
+        if (mounted) load(); 
+    }, [mounted]);
 
     const handleDelete = async (name: string) => {
         if (!confirm(`Are you sure you want to delete secret "${name}"?`)) return;
@@ -66,6 +73,8 @@ export default function SecretsPage() {
             setCreating(false);
         }
     };
+
+    if (!mounted) return null;
 
     const filtered = secrets.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 

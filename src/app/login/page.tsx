@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import React, { useState, Suspense } from 'react'
+import React, { useState, Suspense, useEffect } from 'react'
 import { TalosLogo } from '@/components/ui/TalosLogo'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Loader2, KeyRound, ArrowRight, ShieldCheck } from 'lucide-react'
@@ -11,11 +11,14 @@ import { useRouter } from 'next/navigation'
 
 function LoginForm() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [email, setEmail] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'login' | 'bootstrap'>('login')
   const [bootstrapToken, setBootstrapToken] = useState('')
+
+  useEffect(() => { setMounted(true); }, [])
 
   async function handlePasskeyLogin(useEmail: boolean) {
     setIsPending(true)
@@ -92,6 +95,8 @@ function LoginForm() {
         setIsPending(false);
     }
   }
+
+  if (!mounted) return null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4 relative overflow-hidden">

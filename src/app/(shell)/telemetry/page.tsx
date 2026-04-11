@@ -10,7 +10,7 @@ import { Activity, Zap, Clock, Shield, ArrowUpRight, ArrowDownRight } from "luci
 import { useMemo } from "react";
 
 export default function TelemetryPage() {
-    const { stats, loading } = useDataSource();
+    const { stats, loading } = useDataSource("LIVE");
 
     const chartData = useMemo(() => {
         if (!stats?.request_volume_series) return [];

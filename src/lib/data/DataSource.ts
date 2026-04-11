@@ -324,7 +324,7 @@ export class SqliteDataSource implements DataSource {
 // Default to HTTP (production mode) unless explicitly set to MOCK for development
 const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "HTTP") as DataMode;
 
-function createDataSource(mode: DataMode): DataSource {
+export function createDataSource(mode: DataMode): DataSource {
     switch (mode) {
         case "WS":
         case "HTTP":
