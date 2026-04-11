@@ -21,13 +21,11 @@ import {
     Secret
 } from "./DataSourceTypes";
 import { HttpDataSource } from "./HttpDataSource";
-import { WsDataSource } from "./WsDataSource"; // Safe static import
 import { deriveCursor, decodeCursor } from "../integrity/cursor";
 
 // Re-export for compatibility
 export * from "./DataSourceTypes";
 export * from "./HttpDataSource";
-// export * from "./WsDataSource"; // Optional, but usually good practice
 
 // --- Helpers ---
 
@@ -326,9 +324,7 @@ const mode = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || "HTTP") as DataMode;
 
 export function createDataSource(mode: DataMode): DataSource {
     switch (mode) {
-        case "WS":
-        case "HTTP":
-        case "LIVE": return new HttpDataSource();
+        case "HTTP": return new HttpDataSource();
         case "SQLITE": return new SqliteDataSource();
         case "MOCK": return new MockDataSource();
         default: return new HttpDataSource(); // Production default

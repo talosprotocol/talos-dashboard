@@ -4,10 +4,9 @@ import "server-only"; // Next.js guard - prevents client import
  * Dashboard Data Mode
  * - MOCK: Synthetic data for development
  * - HTTP: REST API polling (production default)
- * - LIVE: Real-time via SSE/WebSocket
  * - SQLITE: Direct DB access (legacy/dev)
  */
-export const DATA_SOURCE_MODE = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || process.env.DATA_SOURCE_MODE || 'HTTP') as 'MOCK' | 'HTTP' | 'WS' | 'SQLITE' | 'LIVE';
+export const DATA_SOURCE_MODE = (process.env.NEXT_PUBLIC_TALOS_DATA_MODE || process.env.DATA_SOURCE_MODE || 'HTTP') as 'MOCK' | 'HTTP' | 'SQLITE';
 
 // These URLs are NEVER exposed to client
 export const TALOS_GATEWAY_URL = process.env.TALOS_GATEWAY_URL || 'http://localhost:8000';

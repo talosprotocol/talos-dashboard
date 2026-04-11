@@ -3,7 +3,7 @@
 
 import { AuditEvent, CursorPage, EvidenceBundle, GatewayStatus } from "./schemas";
 
-export type DataMode = "MOCK" | "SQLITE" | "HTTP" | "WS" | "LIVE";
+export type DataMode = "MOCK" | "SQLITE" | "HTTP";
 export interface DashboardStats {
     requests_24h: number;
     tokens_24h?: number;

@@ -60,13 +60,13 @@ bash scripts/test.sh
 
 ## Auth Model
 
-The dashboard no longer uses NextAuth. The live auth path is:
+The dashboard is secured with a passkey-first auth model. The live auth path is:
 
 1. WebAuthn bootstrap or login via `src/app/api/auth/webauthn/*`
 2. Signed session cookies validated in `src/middleware.ts`
 3. DB-backed session and authenticator state in `src/db/schema.ts`
 
-The visible `/signup` page is not a full production registration flow; the supported bootstrap path is the passkey/device flow on `/login`.
+The supported bootstrap path is the passkey/device flow on `/login`, which supports first-device admin enrollment using the `TALOS_BOOTSTRAP_TOKEN`.
 
 ## Health Endpoints
 

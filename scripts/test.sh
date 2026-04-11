@@ -22,6 +22,21 @@ npm run typecheck
 echo "Running tests..."
 npm test -- --run --exclude "**/submodules/**" --exclude "**/.next/**" --exclude "**/node_modules/**"
 
+echo "Checking route integrity..."
+# Simple check: verify every route in navRegistry.ts has a corresponding page.tsx
+# Extract routes from navRegistry.ts
+ROUTES=$(grep -oP '"/\K[^"]+' src/lib/navRegistry.ts | grep -v "^api/")
+for route in $ROUTES; do
+  # Check in app/(shell)/[route]/page.tsx or app/[route]/page.tsx
+  if [[ ! -f "src/app/(shell)/$route/page.tsx" ]] && [[ ! -f "src/app/$route/page.tsx" ]] && [[ ! -f "src/app/$route.tsx" ]]; then
+    # Handle nested routes like llm/upstreams -> src/app/(shell)/llm/upstreams/page.tsx
+    if [[ ! -d "src/app/(shell)/$route" ]] && [[ ! -d "src/app/$route" ]]; then
+       echo "❌ Missing route implementation for: /$route"
+       # exit 1 # Temporary warning during migration
+    fi
+  fi
+done
+
 if [[ "${TALOS_SKIP_BUILD:-false}" != "true" ]]; then
   echo "Running build..."
 fi
