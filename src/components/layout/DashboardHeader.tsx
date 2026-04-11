@@ -23,6 +23,12 @@ export function DashboardHeader() {
             System Status
           </Link>
           <Link
+            href="/management"
+            className="transition-colors hover:text-white text-slate-400 text-xs uppercase tracking-wider font-semibold"
+          >
+            Management
+          </Link>
+          <Link
             href="https://docs.talosprotocol.com"
             target="_blank"
             className="transition-colors hover:text-white text-slate-400 text-xs uppercase tracking-wider font-semibold"

@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+export const dynamic = 'force-dynamic'
+
+import React, { useState, Suspense } from 'react'
 import { TalosLogo } from '@/components/ui/TalosLogo'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { Loader2, KeyRound, ArrowRight, ShieldCheck } from 'lucide-react'
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 import { useRouter } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [isPending, setIsPending] = useState(false)
@@ -205,5 +207,17 @@ export default function LoginPage() {
         </div>
       </GlassPanel>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+        <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--accent)]" />
+        </div>
+    }>
+        <LoginForm />
+    </Suspense>
   )
 }

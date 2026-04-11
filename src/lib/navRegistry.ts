@@ -33,6 +33,13 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "core",
         parent: null,
     },
+    "/management": {
+        label: "Management",
+        icon: "⚙️",
+        ariaLabel: "System Management Hub",
+        group: "core",
+        parent: null,
+    },
     "/llm/upstreams": {
         label: "Upstreams",
         icon: "☁️",
