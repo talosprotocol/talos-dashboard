@@ -294,7 +294,8 @@ export class HttpDataSource implements DataSource {
         filters?: AuditFilters
     }): Promise<CursorPage<AuditEvent>> {
         // Call dashboard proxy, not direct service URL
-        const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
+        const isClient = typeof window !== "undefined";
+        const origin = isClient ? window.location.origin : "http://localhost:3000";
         const url = new URL('/api/admin/v1/audit/events', origin);
         url.searchParams.set('limit', params.limit.toString());
         if (params.cursor) url.searchParams.set('before', params.cursor);
@@ -339,6 +340,8 @@ export class HttpDataSource implements DataSource {
     }
 
     subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void {
+        if (typeof window === "undefined") return () => {};
+        
         let oldestCursor: string | undefined;
         let isClosed = false;
 
