@@ -90,6 +90,15 @@ export async function validateRequest() {
     if (sigBytes.length !== expectedSigBytes.length) return null;
     if (!timingSafeEqual(sigBytes, expectedSigBytes)) return null;
 
+    // In MOCK mode, if the signature is valid, bypass the database lookup
+    const DATA_SOURCE_MODE = process.env.NEXT_PUBLIC_TALOS_DATA_MODE || process.env.DATA_SOURCE_MODE || 'HTTP';
+    if (DATA_SOURCE_MODE === 'MOCK') {
+        return {
+            session: { id: "mock-session", userId: "dev-user", expiresAt: new Date(Date.now() + 86400000) },
+            user: { id: "dev-user", email: "admin@talos.security", role: "admin" }
+        };
+    }
+
     // 4. DB Lookup
     const tokenBytes = b64urlToBytes(tokenB64);
     const tokenHash = sha256(tokenBytes);

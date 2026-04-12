@@ -26,6 +26,7 @@ export const TalosLogo: React.FC<TalosLogoProps> = ({
                 sizes="32px"
                 className="object-contain"
                 priority
+                unoptimized
             />
         </div>
     );

@@ -30,6 +30,8 @@ FROM node:20-alpine AS builder
 
 ARG GIT_SHA=unknown
 ARG VERSION=unknown
+ARG NEXT_PUBLIC_TALOS_DATA_MODE=HTTP
+ARG NEXT_PUBLIC_RP_ID=127.0.0.1
 
 WORKDIR /app
 
@@ -51,6 +53,8 @@ RUN rm -rf node_modules/@talosprotocol/contracts && \
 # Set production environment
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_TALOS_DATA_MODE=${NEXT_PUBLIC_TALOS_DATA_MODE}
+ENV NEXT_PUBLIC_RP_ID=${NEXT_PUBLIC_RP_ID}
 
 # Remove local path aliases from tsconfig.json to ensure we use the installed node_module
 RUN node scripts/clean-tsconfig.js
@@ -66,6 +70,7 @@ FROM node:20-alpine AS runner
 ARG GIT_SHA=unknown
 ARG VERSION=unknown
 ARG BUILD_TIME=unknown
+ARG NEXT_PUBLIC_TALOS_DATA_MODE=HTTP
 
 WORKDIR /app
 
@@ -73,7 +78,8 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     GIT_SHA=${GIT_SHA} \
     VERSION=${VERSION} \
-    BUILD_TIME=${BUILD_TIME}
+    BUILD_TIME=${BUILD_TIME} \
+    NEXT_PUBLIC_TALOS_DATA_MODE=${NEXT_PUBLIC_TALOS_DATA_MODE}
 
 # Create non-root user (Alpine Linux syntax)
 RUN addgroup -g 1001 -S nodejs && \

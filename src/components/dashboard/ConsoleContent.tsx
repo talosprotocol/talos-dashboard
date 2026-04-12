@@ -13,7 +13,7 @@ import Link from "next/link";
  * Console Content - Logic separated for client-side rendering
  */
 export default function ConsoleContent() {
-    const { stats, events, loading, hasMore, loadMore, loadingMore } = useDataSource();
+    const { stats, events, loading, hasMore, loadMore, loadingMore, refreshSection } = useDataSource();
 
     return (
         <div className="space-y-8">
@@ -47,6 +47,15 @@ export default function ConsoleContent() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Main Feed */}
                         <div className="lg:col-span-2">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold tracking-tight">Activity Feed</h2>
+                                <button 
+                                    onClick={() => refreshSection('events')}
+                                    className="px-3 py-1 text-xs border border-[var(--border)] rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--text-muted)]"
+                                >
+                        Refresh Stream
+                    </button>
+                            </div>
                             <ActivityFeed
                                 events={events}
                                 hasMore={hasMore}
@@ -57,6 +66,15 @@ export default function ConsoleContent() {
 
                         {/* Sidebar Charts */}
                         <div className="space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-xl font-bold tracking-tight">Analytics</h2>
+                                <button 
+                                    onClick={() => refreshSection('stats')}
+                                    className="px-3 py-1 text-xs border border-[var(--border)] rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--text-muted)]"
+                                >
+                        Refresh Metrics
+                    </button>
+                            </div>
                             <DenialTaxonomyChart data={stats.denial_reason_counts} />
                             <RequestVolumeChart data={stats.request_volume_series} />
                         </div>

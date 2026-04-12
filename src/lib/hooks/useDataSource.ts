@@ -79,11 +79,15 @@ export function useDataSource(modeOverride?: DataMode) {
                 const newSeries = [...prev.request_volume_series];
                 newEvents.forEach(evt => {
                     const bucketTime = Math.floor(evt.timestamp / 3600) * 3600;
-                    const existingBucket = newSeries.find(s => s.time === bucketTime);
-                    if (existingBucket) {
-                        if (evt.outcome === "OK") existingBucket.ok++;
-                        else if (evt.outcome === "DENY") existingBucket.deny++;
-                        else existingBucket.error++;
+                    const bucketIndex = newSeries.findIndex(s => s.time === bucketTime);
+                    if (bucketIndex !== -1) {
+                        const existingBucket = newSeries[bucketIndex];
+                        newSeries[bucketIndex] = {
+                            ...existingBucket,
+                            ok: evt.outcome === "OK" ? existingBucket.ok + 1 : existingBucket.ok,
+                            deny: evt.outcome === "DENY" ? existingBucket.deny + 1 : existingBucket.deny,
+                            error: evt.outcome === "ERROR" ? existingBucket.error + 1 : existingBucket.error
+                        };
                     } else {
                         newSeries.push({
                             time: bucketTime,
@@ -108,55 +112,63 @@ export function useDataSource(modeOverride?: DataMode) {
         return () => clearInterval(interval);
     }, []);
 
+    // Worker Reference
+    const workerRef = useRef<Worker | null>(null);
+
+    // Update exposed API to allow forced refresh
+    const refreshSection = useCallback((target: 'stats' | 'events' | 'gateway_status' | 'all') => {
+        if (workerRef.current) {
+            workerRef.current.postMessage({ type: 'REFRESH', target });
+        }
+    }, []);
+
     // Initial Load
     useEffect(() => {
-        async function init() {
-            setLoading(true);
-            try {
-                const now = Math.floor(Date.now() / 1000);
+        setLoading(true);
+
+        // Instantiate Worker safely ensuring client environment
+        if (typeof window !== "undefined" && !workerRef.current) {
+            workerRef.current = new Worker(new URL('../data/prefetch.worker.ts', import.meta.url));
+            
+            workerRef.current.onmessage = (e: MessageEvent) => {
+                const { type, payload } = e.data;
                 
-                // Fetch stats and events in parallel
-                const [statsData, eventsPage, statusData] = await Promise.allSettled([
-                    ds.getStats({ from: now - 86400, to: now }),
-                    ds.listAuditEvents({ limit: 20 }),
-                    ds.getGatewayStatus()
-                ]);
-
-                // Process stats
-                if (statsData.status === 'fulfilled') {
-                    setStats(statsData.value);
-                } else {
-                    setStats({
-                        requests_24h: 0,
-                        auth_success_rate: 0,
-                        denial_reason_counts: {},
-                        request_volume_series: []
-                    });
+                if (type === 'DATA_STATS') {
+                    setStats(prev => ({
+                        ...prev,
+                        ...payload
+                    }));
+                } else if (type === 'DATA_EVENTS') {
+                    setEvents(payload.items);
+                    setCursor(payload.next_cursor);
+                    setHasMore(payload.has_more);
+                } else if (type === 'DATA_GATEWAY_STATUS') {
+                    setGatewayStatus(payload);
                 }
 
-                // Process events
-                if (eventsPage.status === 'fulfilled') {
-                    setEvents(eventsPage.value.items);
-                    setCursor(eventsPage.value.next_cursor);
-                    setHasMore(eventsPage.value.has_more);
-                }
-
-                // Process gateway status
-                if (statusData.status === 'fulfilled') {
-                    setGatewayStatus(statusData.value);
-                }
-            } catch (err) {
-                console.error("Failed to load initial data", err);
-            } finally {
+                // If any core metric completes, we can kill the primary loading state
                 setLoading(false);
-            }
+            };
+
+            workerRef.current.onerror = (e) => {
+                console.error("Data Prefetch Worker Error:", e);
+                setLoading(false);
+            };
+
+            // Kick off prefetch immediately
+            workerRef.current.postMessage({ type: 'PREFETCH_INIT' });
         }
-        init();
 
         // Subscribe to Live Stream
         const unsubscribe = ds.subscribe(handleMessage);
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            if (workerRef.current) {
+                workerRef.current.terminate();
+                workerRef.current = null;
+            }
+        };
     }, [ds, handleMessage]);
 
     const loadMore = useCallback(async () => {
@@ -181,6 +193,7 @@ export function useDataSource(modeOverride?: DataMode) {
         loading,
         loadingMore,
         hasMore,
-        loadMore
+        loadMore,
+        refreshSection
     };
 }

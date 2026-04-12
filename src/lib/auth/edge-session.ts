@@ -2,8 +2,8 @@
 export const COOKIE_NAME_PROD = '__Host-talos.sid';
 export const COOKIE_NAME_DEV = 'talos.sid';
 
-export function getCookieName() {
-  return process.env.NODE_ENV === 'production' ? COOKIE_NAME_PROD : COOKIE_NAME_DEV;
+export function getCookieNames() {
+  return [COOKIE_NAME_PROD, COOKIE_NAME_DEV];
 }
 
 export async function verifyCookieSignature(

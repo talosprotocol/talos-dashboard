@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getCookieName, verifyCookieSignature } from '@/lib/auth/edge-session';
+import { getCookieNames, verifyCookieSignature } from '@/lib/auth/edge-session';
 
 const SECRET_KEY = process.env.AUTH_COOKIE_HMAC_SECRET || 'dev-secret-change-me';
 
@@ -11,14 +11,22 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = 
     pathname === '/login' ||
     pathname.startsWith('/api/auth/webauthn/') ||
+    pathname === '/api/auth/dev-login' ||
     pathname === '/api/health' ||
     pathname === '/api/debug/reset' ||
     pathname === '/favicon.ico' ||
-    pathname.startsWith('/_next/');
+    pathname.startsWith('/_next/') ||
+    pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/);
 
   // 2. Get Cookie
-  const cookieName = getCookieName();
-  const cookie = request.cookies.get(cookieName);
+  const cookieNames = getCookieNames();
+  let cookie;
+  for (const name of cookieNames) {
+      if (request.cookies.has(name)) {
+          cookie = request.cookies.get(name);
+          break;
+      }
+  }
 
   // 3. Verify Cookie
   let isValid = false;
