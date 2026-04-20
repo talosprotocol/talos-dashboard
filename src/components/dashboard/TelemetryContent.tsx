@@ -3,8 +3,8 @@
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { useDataSource } from "@/lib/hooks/useDataSource";
 import { 
-    LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-    Tooltip, ResponsiveContainer, Legend, BarChart, Bar 
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+    Tooltip, ResponsiveContainer, BarChart, Bar 
 } from "recharts";
 import { Activity, Zap, Clock, Shield, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useMemo } from "react";

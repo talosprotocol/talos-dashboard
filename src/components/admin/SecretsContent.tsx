@@ -1,48 +1,87 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/lib/hooks/use-toast";
-import { dataSource, Secret } from "@/lib/data/DataSource";
+import { dataSource } from "@/lib/data/DataSource";
+import type { Secret, KekStatus, RotationOperation } from "@/lib/data/DataSourceTypes";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Plus, Trash2, Key, Search, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Key, Search, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Clock, Lock } from "lucide-react";
 import { AdminModal } from "@/components/admin/AdminModal";
 
 export default function SecretsContent() {
     const [secrets, setSecrets] = useState<Secret[]>([]);
     const [loading, setLoading] = useState(true);
+    const [_error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [showAdd, setShowAdd] = useState(false);
     const { toast } = useToast();
-    
+
     const [newName, setNewName] = useState("");
     const [newValue, setNewValue] = useState("");
     const [creating, setCreating] = useState(false);
 
-    const load = async () => {
+    // Rotation State
+    const [kekStatus, setKekStatus] = useState<KekStatus | null>(null);
+    const [activeOp, setActiveOp] = useState<RotationOperation | null>(null);
+    const [rotating, setRotating] = useState(false);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        setError(null);
         try {
-            const data = await dataSource.listSecrets();
+            const [data, kek] = await Promise.all([
+                dataSource.listSecrets(),
+                dataSource.getKekStatus()
+            ]);
             setSecrets(data);
+            setKekStatus(kek);
         } catch (err) {
-            console.error(err);
+            console.error("Failed to load secrets", err);
+            const msg = err instanceof Error ? err.message : "Failed to synchronize with KMS";
+            setError(msg);
+            toast({ title: "Sync Failure", description: msg, variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
 
-    useEffect(() => { 
-        load(); 
-    }, []);
+    useEffect(() => { load(); }, [load]);
+
+    // Poll rotation operation status
+    useEffect(() => {
+        if (!activeOp || activeOp.status !== "running") return;
+        const interval = setInterval(async () => {
+            try {
+                const updated = await dataSource.getRotationStatus(activeOp.id);
+                setActiveOp(updated);
+                if (updated.status !== "running") {
+                    clearInterval(interval);
+                    load();
+                    toast({
+                        title: updated.status === "completed" ? "Rotation Complete" : "Rotation Failed",
+                        description: updated.status === "completed"
+                            ? `Rotated ${updated.stats?.rotated ?? 0} of ${updated.stats?.scanned ?? 0} secrets.`
+                            : updated.last_error || "An error occurred during rotation.",
+                        variant: updated.status === "completed" ? "default" : "destructive"
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to poll rotation", e);
+            }
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [activeOp, load, toast]);
 
     const handleDelete = async (name: string) => {
-        if (!confirm(`Are you sure you want to delete secret "${name}"?`)) return;
+        if (!confirm(`Delete secret "${name}"? This action cannot be undone.`)) return;
         try {
             await dataSource.deleteSecret(name);
-            setSecrets(secrets.filter(s => s.name !== name));
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "Unknown error";
+            setSecrets(prev => prev.filter(s => s.name !== name));
+            toast({ title: "Secret Deleted", description: `"${name}" has been removed.` });
+        } catch (err) {
             toast({
-                title: "Exclusion Registry Error",
-                description: `Failed to remove secret: ${message}`,
+                title: "Delete Failed",
+                description: err instanceof Error ? err.message : "Unknown error",
                 variant: "destructive"
             });
         }
@@ -52,16 +91,14 @@ export default function SecretsContent() {
         if (!newName.trim() || !newValue.trim()) return;
         setCreating(true);
         try {
-            await dataSource.createSecret(newName, newValue);
-            setNewName("");
-            setNewValue("");
-            setShowAdd(false);
-            load();
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : "Unknown error";
+            await dataSource.createSecret(newName.trim(), newValue);
+            setNewName(""); setNewValue(""); setShowAdd(false);
+            await load();
+            toast({ title: "Secret Created", description: `"${newName}" stored securely.` });
+        } catch (err) {
             toast({
-                title: "Registry Ingestion Error",
-                description: `Failed to create secret: ${message}`,
+                title: "Create Failed",
+                description: err instanceof Error ? err.message : "Unknown error",
                 variant: "destructive"
             });
         } finally {
@@ -69,126 +106,240 @@ export default function SecretsContent() {
         }
     };
 
+    const handleRotate = async () => {
+        const staleCount = Object.values(kekStatus?.stale_counts || {}).reduce((a, b) => a + b, 0);
+        if (!confirm(`This will re-encrypt ${staleCount} stale secret(s) under the current KEK. Background rotation will begin immediately. Continue?`)) return;
+        setRotating(true);
+        try {
+            const op = await dataSource.rotateAllSecrets();
+            setActiveOp(op);
+            toast({ title: "Rotation Started", description: `Operation ${op.id} is running in the background.` });
+        } catch (err) {
+            toast({
+                title: "Rotation Error",
+                description: err instanceof Error ? err.message : "Unknown error",
+                variant: "destructive"
+            });
+        } finally {
+            setRotating(false);
+        }
+    };
+
     const filtered = secrets.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+    const staleCount = Object.values(kekStatus?.stale_counts || {}).reduce((a, b) => a + b, 0);
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-6 pb-12">
+            {/* Header */}
+            <div className="flex justify-between items-start flex-wrap gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Key className="text-[var(--accent)]" /> Secrets Management
+                    <h1 className="text-2xl font-bold flex items-center gap-2 text-white">
+                        <Key className="text-[var(--accent)]" size={22} />
+                        Secrets Management
                     </h1>
-                    <p className="text-[var(--text-muted)] text-sm">Managed credentials and keys as named references.</p>
+                    <p className="text-slate-500 text-sm mt-1">
+                        Platform credentials stored encrypted under the current Key Encryption Key (KEK).
+                    </p>
                 </div>
-                <button 
+                <button
+                    id="btn-add-secret"
                     onClick={() => setShowAdd(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--bg)] rounded-lg font-semibold hover:opacity-90 transition-all"
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] text-[var(--bg)] rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-[0_0_20px_rgba(20,255,236,0.2)]"
                 >
-                    <Plus size={18} /> Add Secret
+                    <Plus size={16} /> New Secret
                 </button>
             </div>
 
-            <GlassPanel className="p-4">
-                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg)]/50 rounded-lg border border-[var(--glass-border)] mb-4 max-w-md">
-                    <Search size={16} className="text-[var(--text-muted)]" />
-                    <input 
-                        placeholder="Search secrets..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        className="bg-transparent border-none focus:ring-0 text-sm flex-1 outline-none"
-                    />
+            {/* KEK Status Panel */}
+            <GlassPanel className="p-5 border-l-4 border-l-cyan-500/60">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div>
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <ShieldCheck size={11} className="text-cyan-400" /> Key Encryption Key Status
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-xs font-mono font-bold text-slate-300 bg-black/30 px-2.5 py-1 rounded-lg border border-white/10">
+                                {kekStatus?.current_kek_id || "Loading…"}
+                            </div>
+                            {kekStatus && (
+                                <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase">
+                                    Active
+                                </span>
+                            )}
+                        </div>
+                        {kekStatus && (
+                            <div className="text-[10px] text-slate-600 mt-2">
+                                {kekStatus.loaded_kek_ids?.length ?? 1} KEK(s) loaded · {staleCount} stale secret(s)
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        id="btn-rotate-all"
+                        onClick={handleRotate}
+                        disabled={rotating || activeOp?.status === "running"}
+                        className="flex items-center gap-2 px-4 py-2.5 border border-amber-500/30 bg-amber-500/10 text-amber-400 rounded-xl font-bold text-sm hover:bg-amber-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                        <RefreshCw size={15} className={rotating || activeOp?.status === "running" ? "animate-spin" : ""} />
+                        {activeOp?.status === "running" ? "Rotation Running…" : `Rotate All (${staleCount} stale)`}
+                    </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-[var(--glass-border)] text-[var(--text-muted)] text-xs uppercase tracking-wider">
-                                <th className="px-4 py-3 font-semibold">Secret Name</th>
-                                <th className="px-4 py-3 font-semibold">Last Updated</th>
-                                <th className="px-4 py-3 font-semibold">Type</th>
-                                <th className="px-4 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[var(--glass-border)]">
-                            {loading ? (
-                                <tr><td colSpan={4} className="py-10 text-center text-[var(--text-muted)]">Loading secrets...</td></tr>
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={4} className="py-10 text-center text-[var(--text-muted)]">No secrets found.</td></tr>
-                            ) : filtered.map(s => (
-                                <tr key={s.name} className="hover:bg-[var(--panel-hover)]/30 transition-colors">
-                                    <td className="px-4 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <ShieldCheck size={14} className="text-emerald-500" />
-                                            <span className="font-mono text-sm font-semibold">{s.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-4 text-sm text-[var(--text-muted)]">
-                                        {s.updated_at ? new Date(s.updated_at).toLocaleString() : (s.created_at ? new Date(s.created_at).toLocaleString() : 'Never')}
-                                    </td>
-                                    <td className="px-4 py-4 text-xs font-medium">
-                                        <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                            CREDENTIAL
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <button 
-                                            onClick={() => handleDelete(s.name)}
-                                            className="p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
-                                            title="Delete Secret"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {/* Rotation Progress */}
+                {activeOp && (
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                {activeOp.status === "running" ? (
+                                    <Clock size={13} className="text-amber-400 animate-spin" />
+                                ) : activeOp.status === "completed" ? (
+                                    <CheckCircle2 size={13} className="text-emerald-400" />
+                                ) : (
+                                    <AlertTriangle size={13} className="text-rose-400" />
+                                )}
+                                <span className="text-[11px] font-bold text-slate-400 font-mono">
+                                    Operation <span className="text-slate-300">{activeOp.id?.slice(0, 12)}…</span>
+                                </span>
+                            </div>
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                activeOp.status === "completed" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : activeOp.status === "running" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            }`}>{activeOp.status}</span>
+                        </div>
+                        {activeOp.stats && (
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { key: "scanned", label: "Scanned", val: activeOp.stats.scanned },
+                                    { key: "rotated", label: "Rotated", val: activeOp.stats.rotated },
+                                    { key: "failed", label: "Failed", val: activeOp.stats.failed, color: "text-rose-400" },
+                                ].map(s => (
+                                    <div key={s.key} className="text-center px-3 py-2 bg-white/[0.02] rounded-lg border border-white/5">
+                                        <div className={`text-lg font-mono font-bold ${s.color || "text-white"}`}>{s.val}</div>
+                                        <div className="text-[9px] font-black text-slate-600 uppercase">{s.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {activeOp.last_error && (
+                            <div className="mt-2 text-[10px] text-rose-400 font-mono bg-rose-500/5 px-2 py-1.5 rounded border border-rose-500/10">
+                                Error: {activeOp.last_error}
+                            </div>
+                        )}
+                    </div>
+                )}
             </GlassPanel>
 
-            <AdminModal
-                title="Add New Secret"
-                description="Securely store a credential value as a named reference"
-                isOpen={showAdd}
-                onClose={() => setShowAdd(false)}
-            >
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Secret Name (ID)</label>
-                        <input 
-                            value={newName}
-                            onChange={e => setNewName(e.target.value)}
-                            placeholder="e.g. openai-prod-key"
-                            className="w-full px-3 py-2 bg-[var(--bg)] border border-[var(--glass-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)]"
+            {/* Secrets Table */}
+            <GlassPanel className="p-5">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-white/5 rounded-xl border border-white/10 max-w-xs">
+                        <Search size={14} className="text-slate-500 shrink-0" />
+                        <input
+                            id="secrets-search"
+                            placeholder="Search secrets..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="bg-transparent border-none focus:ring-0 text-sm flex-1 outline-none text-slate-200 placeholder:text-slate-600"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold uppercase text-[var(--text-muted)] mb-1">Secret Value (Hidden after save)</label>
-                        <textarea 
-                            value={newValue}
-                            onChange={e => setNewValue(e.target.value)}
-                            placeholder="Paste sensitive value here..."
-                            rows={3}
-                            className="w-full px-3 py-2 bg-[var(--bg)] border border-[var(--glass-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] font-mono"
-                        />
+                    <span className="text-[10px] font-black text-slate-600 ml-auto">{filtered.length} secret{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+
+                {loading ? (
+                    <div className="space-y-2">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-12 bg-white/[0.02] rounded-xl animate-pulse" />
+                        ))}
                     </div>
-                    <div className="flex gap-3 pt-4 border-t border-[var(--glass-border)]">
-                        <button 
-                            onClick={() => setShowAdd(false)}
-                            className="flex-1 px-4 py-2 border border-[var(--glass-border)] rounded-lg text-sm font-semibold hover:bg-[var(--panel-hover)] transition-all"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            onClick={handleCreate}
-                            disabled={creating || !newName.trim() || !newValue.trim()}
-                            className="flex-1 px-4 py-2 bg-[var(--accent)] text-[var(--bg)] rounded-lg text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
-                        >
-                            {creating ? 'Creating...' : 'Create Secret'}
-                        </button>
+                ) : filtered.length === 0 ? (
+                    <div className="text-center py-16 border border-dashed border-white/10 rounded-xl">
+                        <Lock size={28} className="text-slate-700 mx-auto mb-3" />
+                        <p className="text-slate-600 text-xs uppercase tracking-widest font-black">No secrets found</p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {filtered.map(secret => (
+                            <SecretRow
+                                key={secret.name}
+                                secret={secret}
+                                onDelete={() => handleDelete(secret.name)}
+                            />
+                        ))}
+                    </div>
+                )}
+            </GlassPanel>
+
+            {/* Add Modal */}
+            {showAdd && (
+                <AdminModal
+                    title="New Secret"
+                    description="Store a named secret securely. The value is encrypted at rest using the current KEK."
+                    onClose={() => { setShowAdd(false); setNewName(""); setNewValue(""); }}
+                    onConfirm={handleCreate}
+                    confirmLabel={creating ? "Storing…" : "Store Secret"}
+                    confirmDisabled={!newName.trim() || !newValue.trim() || creating}
+                >
+                    <div className="space-y-3">
+                        <div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Secret Name</label>
+                            <input
+                                id="new-secret-name"
+                                autoFocus
+                                placeholder="e.g. openai-api-key"
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                className="mt-1 w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-sm font-mono text-slate-200 outline-none focus:border-[var(--accent)]/50 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Secret Value</label>
+                            <input
+                                id="new-secret-value"
+                                type="password"
+                                placeholder="The secret value to encrypt"
+                                value={newValue}
+                                onChange={e => setNewValue(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleCreate()}
+                                className="mt-1 w-full px-3 py-2 bg-black/30 border border-white/10 rounded-xl text-sm font-mono text-slate-200 outline-none focus:border-[var(--accent)]/50 transition-colors"
+                            />
+                        </div>
+                    </div>
+                </AdminModal>
+            )}
+        </div>
+    );
+}
+
+function SecretRow({
+    secret, onDelete
+}: { secret: Secret; onDelete: () => void }) {
+    return (
+        <div className="group flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
+            <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
+                    <Key size={13} className="text-cyan-400" />
+                </div>
+                <div className="min-w-0">
+                    <div className="text-sm font-mono font-bold text-slate-200 truncate">{secret.name}</div>
+                    <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">
+                        {secret.updated_at ? `Updated ${new Date(secret.updated_at).toLocaleDateString()}` : "Active"}
                     </div>
                 </div>
-            </AdminModal>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+                {secret.kek_id && (
+                    <span className="text-[9px] font-black text-slate-600 bg-white/5 px-1.5 py-0.5 rounded font-mono">
+                        {secret.kek_id.slice(0, 8)}…
+                    </span>
+                )}
+                <button
+                    onClick={onDelete}
+                    aria-label={`Delete ${secret.name}`}
+                    className="p-1.5 rounded-lg text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                >
+                    <Trash2 size={14} />
+                </button>
+            </div>
         </div>
     );
 }

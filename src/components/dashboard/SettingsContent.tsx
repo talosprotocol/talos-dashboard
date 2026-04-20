@@ -3,7 +3,6 @@
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun, Shield, Database, Terminal, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
 
 export default function SettingsContent() {
     const { theme, setTheme } = useTheme();

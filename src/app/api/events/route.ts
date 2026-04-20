@@ -9,9 +9,9 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth/session";
-import { DATA_SOURCE_MODE, TALOS_AUDIT_URL, AUTH_ADMIN_SECRET } from "@/lib/config";
+import { DATA_SOURCE_MODE, TALOS_AUDIT_URL } from "@/lib/config";
 import { MockDataSource } from "@/lib/mockData";
-import { signAdminJwt } from "@/lib/auth/utils";
+import { getBrokeredAdminToken } from "@/lib/auth/adminTokenBroker";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     }
   } else {
      // Mock session for dev mode if needed, or leave empty to test unauth handling upstream
-     sessionData = { user: { id: 'dev-user', role: 'admin' } };
+     sessionData = { user: { id: process.env.AUTH_ADMIN_PRINCIPAL || 'dev-admin', role: 'admin' } };
   }
 
   // ---------------------------------------------
@@ -104,14 +104,13 @@ export async function GET(req: NextRequest): Promise<Response> {
     if (sessionData?.user) {
         const principalId = sessionData.user.id;
         upstreamHeaders['X-Talos-Principal-Id'] = principalId;
-        
-        // Generate Admin JWT for the Audit service
-        const token = signAdminJwt({
-          sub: principalId,
-          role: sessionData.user.role || 'user',
-          exp: Math.floor(Date.now() / 1000) + 300 // 5 min expiry
-        }, AUTH_ADMIN_SECRET);
-        
+
+        const token = await getBrokeredAdminToken({
+          principal: principalId,
+          permissions: ["audit.read"],
+          sessionId: sessionData.session?.id,
+        });
+
         upstreamHeaders['Authorization'] = `Bearer ${token}`;
     }
 

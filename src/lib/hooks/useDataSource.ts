@@ -19,7 +19,6 @@ export function useDataSource(modeOverride?: DataMode) {
     const [hasMore, setHasMore] = useState(true);
 
     // Batching refs to prevent jitter
-    const pendingEvents = useRef<AuditEvent[]>([]);
     const pendingStatsUpdate = useRef<{ 
         requests: number, 
         denials: Record<string, number>,

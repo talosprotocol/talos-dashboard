@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/auth/session';
-import { TALOS_AUDIT_URL, AUTH_ADMIN_SECRET } from '@/lib/config';
-import { signAdminJwt } from '@/lib/auth/utils';
+import { TALOS_AUDIT_URL } from '@/lib/config';
+import { getBrokeredAdminToken } from '@/lib/auth/adminTokenBroker';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -23,17 +23,17 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   } else {
-    sessionData = { user: { id: 'dev-user', role: 'admin' } };
+    sessionData = { user: { id: process.env.AUTH_ADMIN_PRINCIPAL || 'dev-admin', role: 'admin' } };
   }
 
-  const principalId = sessionData?.user?.id || 'anonymous';
-  const token = signAdminJwt({
-    sub: principalId,
-    role: 'admin',
-    exp: Math.floor(Date.now() / 1000) + 300
-  }, AUTH_ADMIN_SECRET);
-
   try {
+    const principalId = sessionData?.user?.id || 'anonymous';
+    const token = await getBrokeredAdminToken({
+      principal: principalId,
+      permissions: ["audit.read"],
+      sessionId: sessionData?.session?.id,
+    });
+
     const upstreamUrl = `${TALOS_AUDIT_URL}/proof/${eventId}`;
     const response = await fetch(upstreamUrl, {
       headers: {

@@ -12,7 +12,7 @@ export async function GET() {
         return NextResponse.json({ tools: [] }, { status: res.status });
     }
     
-    const data = await res.json();
+    await res.json();
     
     // If the service is active, we return the standard secure agent tools
     // The main.py does not expose /v1/tools yet, so we return a baseline to align with visibility

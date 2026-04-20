@@ -7,9 +7,8 @@ import { DenialTaxonomyChart } from "@/components/dashboard/DenialTaxonomyChart"
 import { RequestVolumeChart } from "@/components/dashboard/RequestVolumeChart";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { useDataSource } from "@/lib/hooks/useDataSource";
-import { Settings, Shield, Zap, LayoutDashboard, Database, Activity } from "lucide-react";
+import { Settings, Shield, Zap, LayoutDashboard, Database, Activity, Lock, Terminal } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
 /**
  * Management Hub - Complete Monitoring & Management Dashboard
@@ -36,11 +35,32 @@ export default function ManagementContent() {
 
                 <div className="flex items-center gap-3">
                     <Link
-                        href="/admin/secrets"
+                        href="/admin/rbac"
                         className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 group"
                     >
                         <Shield className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400" />
+                        Manage RBAC
+                    </Link>
+                    <Link
+                        href="/admin/secrets"
+                        className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 group"
+                    >
+                        <Lock className="w-3.5 h-3.5 text-slate-500 group-hover:text-amber-400" />
                         Manage Secrets
+                    </Link>
+                    <Link
+                        href="/admin/aiops"
+                        className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 group"
+                    >
+                        <Terminal className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                        AIOps Monitoring
+                    </Link>
+                    <Link
+                        href="/admin/governance"
+                        className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 group"
+                    >
+                        <Shield className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400" />
+                        Governance Agent
                     </Link>
                     <Link
                         href="/configuration"
@@ -120,19 +140,24 @@ export default function ManagementContent() {
                         )}
                     </div>
 
-                    {/* System Maintenance Card */}
                     <GlassPanel className="p-6 bg-indigo-500/5 border-indigo-500/10">
                         <h3 className="text-xs font-bold text-slate-200 mb-2 uppercase tracking-wide">Infrastructure Maintenance</h3>
                         <p className="text-[10px] text-slate-500 leading-relaxed mb-4">
                             Operational controls for identity rotation, audit cleanup, and connector reconfiguration.
                         </p>
                         <div className="grid grid-cols-2 gap-2">
-                            <button className="px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-colors border border-white/5">
-                                Rotate Keys
-                            </button>
-                            <button className="px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-colors border border-white/5">
-                                Purge Logs
-                            </button>
+                            <Link
+                                href="/admin/secrets"
+                                className="px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 rounded-lg transition-colors border border-amber-500/20 text-center"
+                            >
+                                🔑 Rotate Keys
+                            </Link>
+                            <Link
+                                href="/audit"
+                                className="px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg transition-colors border border-white/5 text-center"
+                            >
+                                📜 View Audit
+                            </Link>
                         </div>
                     </GlassPanel>
                 </div>

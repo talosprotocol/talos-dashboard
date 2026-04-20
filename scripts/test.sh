@@ -20,12 +20,12 @@ echo "Running typecheck..."
 npm run typecheck
 
 echo "Running tests..."
-npm test -- --run --exclude "**/submodules/**" --exclude "**/.next/**" --exclude "**/node_modules/**"
+npm test -- --run --exclude "**/submodules/**" --exclude "**/.next/**" --exclude "**/node_modules/**" --exclude "**/tests/e2e/**"
 
 echo "Checking route integrity..."
 # Simple check: verify every route in navRegistry.ts has a corresponding page.tsx
 # Extract routes from navRegistry.ts
-ROUTES=$(grep -oP '"/\K[^"]+' src/lib/navRegistry.ts | grep -v "^api/")
+ROUTES=$(sed -n '/^[[:space:]]*"\/api\//d; s/^[[:space:]]*"\/\([^"]*\)".*/\1/p' src/lib/navRegistry.ts)
 for route in $ROUTES; do
   # Check in app/(shell)/[route]/page.tsx or app/[route]/page.tsx
   if [[ ! -f "src/app/(shell)/$route/page.tsx" ]] && [[ ! -f "src/app/$route/page.tsx" ]] && [[ ! -f "src/app/$route.tsx" ]]; then

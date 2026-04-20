@@ -3,7 +3,7 @@
  * Single source of truth for all routes, labels, and hierarchy.
  */
 
-export type NavGroup = "core" | "demos";
+export type NavGroup = "core" | "admin" | "demos";
 export type NavItem = {
     label: string;
     icon: string;
@@ -96,6 +96,27 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "core",
         parent: null,
     },
+    "/admin/secrets": {
+        label: "Secrets",
+        icon: "🔐",
+        ariaLabel: "Secrets Management",
+        group: "admin",
+        parent: null,
+    },
+    "/admin/rbac": {
+        label: "RBAC",
+        icon: "🛡️",
+        ariaLabel: "Role-Based Access Control",
+        group: "admin",
+        parent: null,
+    },
+    "/admin/aiops": {
+        label: "AIOps Monitor",
+        icon: "🤖",
+        ariaLabel: "Agent Tool-Call Monitor",
+        group: "admin",
+        parent: null,
+    },
     "/settings": {
         label: "Settings",
         icon: "⚙️",
@@ -130,7 +151,7 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
 
 /**
  * Get navigation items for the sidebar.
- * Only returns top-level items (parent === null).
+ * Returns core items, then admin items, both top-level only.
  */
 export function getNavItems(): { href: string; item: NavItem }[] {
     return Object.entries(NAV_REGISTRY)

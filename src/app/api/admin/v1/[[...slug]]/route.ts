@@ -9,9 +9,10 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/auth/session';
-import { TALOS_GATEWAY_URL, DATA_SOURCE_MODE, AUTH_ADMIN_SECRET } from '@/lib/config';
+import { TALOS_GATEWAY_URL, DATA_SOURCE_MODE } from '@/lib/config';
 import { MockDataSource } from '@/lib/mockData';
-import { signAdminJwt } from '@/lib/auth/utils';
+import { getAdminProxyPermissions } from '@/lib/auth/adminPermissions';
+import { getBrokeredAdminToken } from '@/lib/auth/adminTokenBroker';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -42,7 +43,7 @@ async function handle(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   } else {
-    sessionData = { user: { id: 'dev-user', role: 'admin' } };
+    sessionData = { user: { id: process.env.AUTH_ADMIN_PRINCIPAL || 'dev-admin', role: 'admin' } };
   }
 
   // Proxy to Gateway Admin API
@@ -57,14 +58,13 @@ async function handle(
     if (sessionData?.user) {
       const principalId = sessionData.user.id;
       headers['X-Talos-Principal-Id'] = principalId;
-      
-      // Generate Admin JWT for the Gateway
-      const token = signAdminJwt({
-        sub: principalId,
-        role: sessionData.user.role || 'user',
-        exp: Math.floor(Date.now() / 1000) + 300 // 5 min expiry
-      }, AUTH_ADMIN_SECRET);
-      
+
+      const token = await getBrokeredAdminToken({
+        principal: principalId,
+        permissions: getAdminProxyPermissions(req.method, path),
+        sessionId: sessionData.session?.id,
+      });
+
       headers['Authorization'] = `Bearer ${token}`;
     }
 

@@ -18,7 +18,12 @@ import {
     ModelGroup,
     McpServer,
     McpPolicy,
-    Secret
+    Secret,
+    KekStatus,
+    RotationOperation,
+    ConfigExport,
+    RbacRole,
+    RbacBinding
 } from "./DataSourceTypes";
 import { HttpDataSource } from "./HttpDataSource";
 import { deriveCursor, decodeCursor } from "../integrity/cursor";
@@ -127,12 +132,54 @@ class MockDataSource implements DataSource {
     // Secrets Management
     async listSecrets(): Promise<Secret[]> {
         return [
-            { name: "openai-key", created_at: new Date().toISOString() },
-            { name: "anthropic-key", created_at: new Date().toISOString() },
+            { name: "openai-key", kek_id: "kek-v1", created_at: new Date().toISOString() },
+            { name: "anthropic-key", kek_id: "kek-v1", created_at: new Date().toISOString() },
         ];
     }
     async createSecret(_name: string, _value: string): Promise<void> {}
     async deleteSecret(_name: string): Promise<void> {}
+    async getKekStatus(): Promise<KekStatus> {
+        return { current_kek_id: "kek-v1-mock", loaded_kek_ids: ["kek-v1-mock"], stale_counts: { "kek-v0": 0 } };
+    }
+    async rotateAllSecrets(): Promise<RotationOperation> {
+        return { id: "op-mock-" + Date.now(), status: "completed", target_kek_id: "kek-v1-mock", stats: { scanned: 2, rotated: 2, failed: 0 }, started_at: new Date().toISOString() };
+    }
+    async getRotationStatus(opId: string): Promise<RotationOperation> {
+        return { id: opId, status: "completed", target_kek_id: "kek-v1-mock", stats: { scanned: 2, rotated: 2, failed: 0 }, started_at: new Date().toISOString() };
+    }
+
+    // Config Management
+    async exportConfig(): Promise<ConfigExport> {
+        return { upstreams: {}, model_groups: {}, routing_policies: {} };
+    }
+    async applyConfig(_config: ConfigExport): Promise<void> {}
+
+    // RBAC Management
+    async listRbacRoles(): Promise<RbacRole[]> {
+        return [
+            { role_id: "role-admin", name: "Admin", permissions: ["*:*"], built_in: true, description: "Full platform access" },
+            { role_id: "role-viewer", name: "Viewer", permissions: ["llm:read", "audit:read"], built_in: true, description: "Read-only access" },
+        ];
+    }
+    async upsertRbacRole(role: RbacRole): Promise<RbacRole> { return role; }
+    async deleteRbacRole(_roleId: string): Promise<void> {}
+
+    async listRbacBindings(): Promise<RbacBinding[]> {
+        return [
+            { 
+                principal_id: "dev-user", 
+                bindings: [
+                    { 
+                        binding_id: "bind_admin", 
+                        role_id: "role-admin", 
+                        scope: { scope_type: "global", attributes: {} } 
+                    }
+                ] 
+            }
+        ];
+    }
+    async upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding> { return binding; }
+    async deleteRbacBinding(_principalId: string): Promise<void> {}
 
     async chatCompletion(_apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
         return {
@@ -152,8 +199,10 @@ class MockDataSource implements DataSource {
         };
     }
 
-    async getStats(range: { from: number; to: number }): Promise<DashboardStats> {
-        const inRange = this.events.filter(e => e.timestamp >= range.from && e.timestamp <= range.to);
+    async getStats(): Promise<DashboardStats> {
+        const now = Math.floor(Date.now() / 1000);
+        const from = now - 24 * 3600;
+        const inRange = this.events.filter(e => e.timestamp >= from && e.timestamp <= now);
 
         // Compute Counts
         const total = inRange.length;
@@ -295,13 +344,29 @@ export class SqliteDataSource implements DataSource {
     async listSecrets(): Promise<Secret[]> { return new MockDataSource().listSecrets(); }
     async createSecret(name: string, value: string): Promise<void> { return new MockDataSource().createSecret(name, value); }
     async deleteSecret(name: string): Promise<void> { return new MockDataSource().deleteSecret(name); }
+    async getKekStatus(): Promise<KekStatus> { return new MockDataSource().getKekStatus(); }
+    async rotateAllSecrets(): Promise<RotationOperation> { return new MockDataSource().rotateAllSecrets(); }
+    async getRotationStatus(opId: string): Promise<RotationOperation> { return new MockDataSource().getRotationStatus(opId); }
+
+    // Config Management
+    async exportConfig(): Promise<ConfigExport> { return new MockDataSource().exportConfig(); }
+    async applyConfig(config: ConfigExport): Promise<void> { return new MockDataSource().applyConfig(config); }
+
+    // RBAC Management
+    async listRbacRoles(): Promise<RbacRole[]> { return new MockDataSource().listRbacRoles(); }
+    async upsertRbacRole(role: RbacRole): Promise<RbacRole> { return new MockDataSource().upsertRbacRole(role); }
+    async deleteRbacRole(roleId: string): Promise<void> { return new MockDataSource().deleteRbacRole(roleId); }
+
+    async listRbacBindings(): Promise<RbacBinding[]> { return new MockDataSource().listRbacBindings(); }
+    async upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding> { return new MockDataSource().upsertRbacBinding(binding); }
+    async deleteRbacBinding(principalId: string): Promise<void> { return new MockDataSource().deleteRbacBinding(principalId); }
 
     async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
         return new MockDataSource().chatCompletion(apiKey, body);
     }
 
-    async getStats(range: { from: number; to: number }): Promise<DashboardStats> {
-        return new MockDataSource().getStats(range); // Fallback to mock for now
+    async getStats(): Promise<DashboardStats> {
+        return new MockDataSource().getStats(); // Fallback to mock for now
     }
 
     async listAuditEvents(params: {

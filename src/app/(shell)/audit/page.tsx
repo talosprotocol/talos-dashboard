@@ -16,6 +16,26 @@ import { useAuditState, selectOrderedEvents, selectInvalidEvents, selectCanFetch
 import { useAuditSSE } from "@/lib/hooks/useAuditSSE";
 import { motion } from "framer-motion";
 
+import { AuditTableSkeleton } from "@/components/dashboard/AuditTableSkeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { t } from "@/lib/i18n";
+
+function PageHeaderSkeleton() {
+    return (
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 py-2">
+            <div className="space-y-3">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-4 w-96" />
+            </div>
+            <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-24 rounded-xl" />
+                <Skeleton className="h-10 w-24 rounded-xl" />
+                <Skeleton className="h-10 w-32 rounded-xl" />
+            </div>
+        </div>
+    );
+}
+
 function AuditPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -131,10 +151,10 @@ function AuditPageContent() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 py-2">
                 <div>
                     <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">
-                        Audit <span className="text-indigo-400">Explorer</span>
+                        {t('audit.title')} <span className="text-indigo-400">{t('audit.subtitle')}</span>
                     </h1>
                     <p className="text-slate-400 text-sm font-medium max-w-2xl">
-                        Monitor and analyze security audit events across the protocol in real-time.
+                        {t('audit.description')}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -143,7 +163,7 @@ function AuditPageContent() {
                         className="inline-flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-xl transition-all duration-300"
                     >
                         <ListFilter className="h-3.5 w-3.5 rotate-180" />
-                        Export
+                        {t('common.export')}
                     </button>
 
                     <GlassPanel
@@ -152,7 +172,7 @@ function AuditPageContent() {
                         onClick={() => setShowFilters(!showFilters)}
                     >
                         <ListFilter className="h-3.5 w-3.5" />
-                        <span>Filters</span>
+                        <span>{t('common.filters')}</span>
                         {Object.keys(filters).length > 0 && (
                             <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white text-[9px] font-bold">
                                 {Object.keys(filters).length}
@@ -168,7 +188,7 @@ function AuditPageContent() {
                         <span className={`h-1.5 w-1.5 rounded-full ${
                             process.env.NEXT_PUBLIC_TALOS_DATA_MODE === 'MOCK' ? 'bg-amber-500' : 'bg-emerald-500'
                         } animate-pulse`} />
-                        {process.env.NEXT_PUBLIC_TALOS_DATA_MODE || 'HTTP'} Mode
+                        {process.env.NEXT_PUBLIC_TALOS_DATA_MODE || 'HTTP'} {t('audit.mode')}
                     </GlassPanel>
                 </div>
             </div>
@@ -185,7 +205,7 @@ function AuditPageContent() {
             {/* Status Messages */}
             {state.connectionState === 'reconnecting' && (
                 <div className="px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-500">
-                    Reconnecting to audit stream...
+                    {t('audit.reconnecting')}
                 </div>
             )}
 
@@ -235,8 +255,9 @@ function AuditPageContent() {
 export default function AuditPage() {
     return (
         <Suspense fallback={
-            <div className="flex items-center justify-center h-96 text-muted-foreground">
-                Loading...
+            <div className="space-y-6">
+                <PageHeaderSkeleton />
+                <AuditTableSkeleton />
             </div>
         }>
             <AuditPageContent />

@@ -13,8 +13,9 @@ import { useRef, useState } from "react";
 import { AuditEvent } from "@/lib/data/schemas";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { cn } from "@/lib/cn";
-import { CheckCircle2, FileJson, ShieldAlert } from "lucide-react";
+import { CheckCircle2, FileJson, SearchX, ShieldAlert } from "lucide-react";
 import { ProofDrawer } from "./ProofDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AuditTableProps {
     readonly data: AuditEvent[];
@@ -250,7 +251,7 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
                 {/* Virtualized Body */}
                 <div
                     ref={parentRef}
-                    className="flex-1 overflow-auto"
+                    className="flex-1 overflow-auto relative"
                     onScroll={(e) => {
                         const target = e.target as HTMLDivElement;
                         if (target.scrollHeight - target.scrollTop - target.clientHeight < 200) {
@@ -258,52 +259,63 @@ export function AuditTable({ data, onFetchMore, isLoading, selectedIds, onSelect
                         }
                     }}
                 >
-                    <table
-                        style={{
-                            height: `${rowVirtualizer.getTotalSize()}px`,
-                            width: '100%',
-                            position: 'relative',
-                        }}
-                    >
-                        <tbody>
-                            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                                const row = rows[virtualRow.index];
-                                return (
-                                    <tr
-                                        key={row.id}
-                                        aria-selected={selectedIds?.has(row.original.event_id)}
-                                        tabIndex={0}
-                                        onClick={() => setSelectedEvent(row.original)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                setSelectedEvent(row.original);
-                                            }
-                                        }}
-                                        data-index={virtualRow.index}
-                                        ref={rowVirtualizer.measureElement}
-                                        className={cn(
-                                            "absolute top-0 left-0 w-full flex items-center px-4 h-12 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group",
-                                            virtualRow.index % 2 === 1 && "bg-white/[0.02]"
-                                        )}
-                                        style={{
-                                            transform: `translateY(${virtualRow.start}px)`,
-                                        }}
-                                    >
-                                        {row.getVisibleCells().map(cell => (
-                                            <td
-                                                key={cell.id}
-                                                style={{ width: cell.column.getSize() }}
-                                                className="flex-shrink-0 overflow-hidden p-0"
-                                            >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </td>
-                                        ))}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                    {isLoading && (
+                    {rows.length === 0 && !isLoading ? (
+                        <div className="flex items-center justify-center h-full">
+                            <EmptyState 
+                                title="No audit events found" 
+                                description="Try adjusting your filters or search criteria to find what you're looking for."
+                                icon={SearchX}
+                                className="border-none bg-transparent"
+                            />
+                        </div>
+                    ) : (
+                        <table
+                            style={{
+                                height: `${rowVirtualizer.getTotalSize()}px`,
+                                width: '100%',
+                                position: 'relative',
+                            }}
+                        >
+                            <tbody>
+                                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                                    const row = rows[virtualRow.index];
+                                    return (
+                                        <tr
+                                            key={row.id}
+                                            aria-selected={selectedIds?.has(row.original.event_id)}
+                                            tabIndex={0}
+                                            onClick={() => setSelectedEvent(row.original)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    setSelectedEvent(row.original);
+                                                }
+                                            }}
+                                            data-index={virtualRow.index}
+                                            ref={rowVirtualizer.measureElement}
+                                            className={cn(
+                                                "absolute top-0 left-0 w-full flex items-center px-4 h-12 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group",
+                                                virtualRow.index % 2 === 1 && "bg-white/[0.02]"
+                                            )}
+                                            style={{
+                                                transform: `translateY(${virtualRow.start}px)`,
+                                            }}
+                                        >
+                                            {row.getVisibleCells().map(cell => (
+                                                <td
+                                                    key={cell.id}
+                                                    style={{ width: cell.column.getSize() }}
+                                                    className="flex-shrink-0 overflow-hidden p-0"
+                                                >
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
+                    {isLoading && rows.length > 0 && (
                         <div className="p-4 text-center text-xs text-[var(--text-muted)]">Loading more events...</div>
                     )}
                 </div>

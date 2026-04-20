@@ -27,7 +27,7 @@ interface ChatResponse {
 }
 
 export default function PlaygroundPage() {
-    const [apiKey, setApiKey] = useState("sk-test-key-1");
+    const [apiKey, setApiKey] = useState("");
     const [selectedModel, setSelectedModel] = useState("");
     const [models, setModels] = useState<ModelGroup[]>([]);
     const [input, setInput] = useState("");
@@ -88,14 +88,14 @@ export default function PlaygroundPage() {
             <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1 space-y-1">
                     <label className="text-xs font-bold uppercase text-[var(--text-muted)] flex items-center gap-1.5">
-                        <Key size={12} /> API Key (Service Account)
+                        <Key size={12} /> Session Token Override
                     </label>
                     <input 
                         type="password"
                         value={apiKey}
                         onChange={e => setApiKey(e.target.value)}
                         className="w-full px-3 py-2 bg-[var(--panel)] border border-[var(--glass-border)] rounded-lg text-sm font-mono focus:outline-none focus:border-[var(--accent)]"
-                        placeholder="sk-..."
+                        placeholder="Leave empty to use dashboard session JWT"
                     />
                 </div>
                 <div className="w-full md:w-64 space-y-1">

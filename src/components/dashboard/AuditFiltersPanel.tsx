@@ -15,10 +15,24 @@ export function AuditFiltersPanel({ filters, onChange, onClose }: Readonly<Audit
         onChange(newFilters);
     };
 
+    const handleClear = () => {
+        onChange({});
+    };
+
     return (
         <GlassPanel className="absolute top-16 right-6 w-80 p-4 z-20 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Filters</h3>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">Filters</h3>
+                    {Object.keys(filters).length > 0 && (
+                        <button 
+                            onClick={handleClear}
+                            className="text-[9px] font-bold uppercase tracking-wider text-indigo-400 hover:text-indigo-300 transition-colors"
+                        >
+                            Clear All
+                        </button>
+                    )}
+                </div>
                 <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                     <X className="w-4 h-4" />
                 </button>

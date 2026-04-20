@@ -20,6 +20,10 @@ class MockEventSource {
 
 // Node test environment doesn't provide EventSource.
 (globalThis as unknown as { EventSource: unknown }).EventSource = MockEventSource;
+Object.defineProperty(globalThis, "window", {
+    value: { location: { origin: "http://localhost:3000", href: "" } },
+    configurable: true,
+});
 
 describe("HttpDataSource Stream Subscription", () => {
     let ds: HttpDataSource;
@@ -40,7 +44,7 @@ describe("HttpDataSource Stream Subscription", () => {
         const callback = vi.fn();
         const unsubscribe = ds.subscribe(callback);
 
-        expect(eventSourceCtor).toHaveBeenCalledWith("/api/audit/stream");
+        expect(eventSourceCtor).toHaveBeenCalledWith("/api/admin/v1/audit/stream");
         expect(createdEventSources).toHaveLength(1);
 
         unsubscribe();

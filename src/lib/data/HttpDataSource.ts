@@ -1,7 +1,8 @@
-import { AuditEvent, CursorPage, GatewayStatus } from "./schemas";
-import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret } from "./DataSourceTypes";
+import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret, RbacRole, RbacBinding, KekStatus, RotationOperation, ConfigExport } from "./DataSourceTypes";
+import { AuditEvent, GatewayStatus, CursorPage } from "./schemas";
 import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
 import { validateCursor } from "../integrity/cursor";
+
 
 // --- Integrity & Backfill State ---
 
@@ -206,12 +207,17 @@ export class HttpDataSource implements DataSource {
     }
 
     async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        };
+        const token = apiKey.trim();
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
         const res = await fetch("/api/admin/v1/llm/chat/completions", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
+            headers,
             body: JSON.stringify(body)
         });
         if (!res.ok) {
@@ -239,10 +245,120 @@ export class HttpDataSource implements DataSource {
     }
 
     async deleteSecret(name: string): Promise<void> {
-        const res = await fetch(`/api/admin/v1/secrets?name=${encodeURIComponent(name)}`, {
+        const res = await fetch(`/api/admin/v1/secrets/${encodeURIComponent(name)}`, {
             method: "DELETE"
         });
         if (!res.ok) throw new Error("Failed to delete secret");
+    }
+
+    async getKekStatus(): Promise<KekStatus> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets/kek-status`);
+        if (!res.ok) throw new Error("Failed to get KEK status");
+        return res.json();
+    }
+
+    async rotateAllSecrets(): Promise<RotationOperation> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets/rotate-all`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({})
+        });
+        if (res.status === 409) {
+            const err = await res.json();
+            throw new Error(err.detail || "Rotation already running");
+        }
+        if (!res.ok) throw new Error("Failed to rotate all secrets");
+        
+        const data = await res.json();
+        // Backend returns { op_id, status, ... }. UI expects { id, status, ... }
+        return {
+            id: data.op_id,
+            status: data.status.toLowerCase(),
+            target_kek_id: data.target_kek_id || "pending",
+            stats: { scanned: 0, rotated: 0, failed: 0 },
+            started_at: new Date().toISOString(),
+        } as RotationOperation;
+    }
+
+    async getRotationStatus(opId: string): Promise<RotationOperation> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/secrets/rotation-status/${opId}`);
+        if (!res.ok) throw new Error("Failed to get rotation status");
+        const data = await res.json();
+        // Normalize to RotationOperation: API uses { id, status, target_kek_id, stats, started_at, ... }
+        return {
+            id: data.id,
+            status: data.status,
+            target_kek_id: data.target_kek_id || "",
+            stats: data.stats || { scanned: 0, rotated: 0, failed: 0 },
+            started_at: data.started_at || "",
+            completed_at: data.completed_at,
+            last_error: data.last_error,
+        } as RotationOperation;
+    }
+
+    // Config Management
+    async exportConfig(): Promise<ConfigExport> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/config:export`);
+        if (!res.ok) throw new Error("Failed to export config");
+        return res.json();
+    }
+
+    async applyConfig(config: ConfigExport): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/config:apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(config)
+        });
+        if (!res.ok) throw new Error("Failed to apply config");
+    }
+
+    // RBAC Management
+    async listRbacRoles(): Promise<RbacRole[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/roles`);
+        if (!res.ok) throw new Error("Failed to list RBAC roles");
+        const data = await res.json();
+        return data.roles;
+    }
+
+    async upsertRbacRole(role: RbacRole): Promise<RbacRole> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/roles`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(role)
+        });
+        if (!res.ok) throw new Error("Failed to upsert RBAC role");
+        return res.json();
+    }
+
+    async deleteRbacRole(roleId: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/roles/${roleId}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete RBAC role");
+    }
+
+    async listRbacBindings(): Promise<RbacBinding[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/bindings`);
+        if (!res.ok) throw new Error("Failed to list RBAC bindings");
+        const data = await res.json();
+        return data.bindings;
+    }
+
+    async upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/bindings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(binding)
+        });
+        if (!res.ok) throw new Error("Failed to upsert RBAC binding");
+        return res.json();
+    }
+
+    async deleteRbacBinding(principalId: string): Promise<void> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/rbac/bindings/${principalId}`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to delete RBAC binding");
     }
 
     async getStats(): Promise<DashboardStats> {

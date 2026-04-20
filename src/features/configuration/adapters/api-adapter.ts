@@ -7,6 +7,7 @@ export interface ApiPort {
 
 export class ApiAdapter implements ApiPort {
   private baseUrl: string = '/api';
+  private principalId: string = 'dev-admin';
 
   async getMerchants(): Promise<Merchant[]> {
     // Mock for now, would call /api/merchants
@@ -20,7 +21,7 @@ export class ApiAdapter implements ApiPort {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer talos-dev-token'
+        'X-Talos-Principal-Id': this.principalId
       },
       body: JSON.stringify({ merchantId, policyVersion: version, payload })
     });

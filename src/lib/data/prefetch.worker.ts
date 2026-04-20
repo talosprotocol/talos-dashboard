@@ -1,49 +1,77 @@
 // Background Web Worker for prefetching dashboard data
-// @ts-nocheck
 
 type FetchTarget = 'stats' | 'events' | 'gateway_status' | 'all';
+type JsonObject = Record<string, unknown>;
+type WorkerContext = {
+  location: Location;
+  postMessage(message: unknown): void;
+  addEventListener(type: 'message', listener: (event: MessageEvent<WorkerMessage>) => void): void;
+};
 
 interface WorkerMessage {
   type: 'PREFETCH_INIT' | 'REFRESH';
   target?: FetchTarget;
 }
 
-const CACHE: Record<string, any> = {
+const CACHE: {
+  stats: JsonObject | null;
+  events: unknown;
+  gatewayStatus: unknown;
+} = {
   stats: null,
   events: null,
   gatewayStatus: null
 };
 
 // Use self to refer to the worker global scope
-const ctx: Worker = self as any;
+const ctx = self as unknown as WorkerContext;
+
+function isRecord(value: unknown): value is JsonObject {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function numberValue(value: unknown, fallback = 0): number {
+  return typeof value === 'number' ? value : fallback;
+}
 
 async function fetchStats() {
-  let usageStats = null;
-  let auditStats = null;
+  let usageStats: JsonObject | null = null;
+  let auditStats: JsonObject | null = null;
   
   try {
     const res1 = await fetch('/api/admin/v1/telemetry/stats?window_hours=24');
-    if (res1.ok) usageStats = await res1.json();
-  } catch (e) {}
+    if (res1.ok) {
+      const data = await res1.json();
+      usageStats = isRecord(data) ? data : null;
+    }
+  } catch {}
 
   try {
     const res2 = await fetch('/api/admin/v1/audit/stats?window_hours=24');
-    if (res2.ok) auditStats = await res2.json();
-  } catch (e) {}
+    if (res2.ok) {
+      const data = await res2.json();
+      auditStats = isRecord(data) ? data : null;
+    }
+  } catch {}
 
   let successRate = 1.0;
-  if (auditStats && auditStats.requests_24h > 0) {
-      const totalDenials = Object.values(auditStats.denial_reason_counts || {}).reduce((a: any, b: any) => a + b, 0);
-      successRate = (auditStats.requests_24h - totalDenials) / auditStats.requests_24h;
+  const requests24h = numberValue(auditStats?.requests_24h);
+  const denialCounts = isRecord(auditStats?.denial_reason_counts) ? auditStats.denial_reason_counts : {};
+  if (requests24h > 0) {
+      const totalDenials = Object.values(denialCounts).reduce<number>(
+        (sum, value) => sum + numberValue(value),
+        0,
+      );
+      successRate = (requests24h - totalDenials) / requests24h;
   }
 
   const result = {
-      requests_24h: auditStats?.requests_24h ?? usageStats?.requests_total ?? 0,
-      tokens_24h: usageStats?.tokens_total ?? 0,
-      cost_24h: usageStats?.cost_usd ?? 0,
-      latency_avg: usageStats?.latency_avg_ms ?? 0,
+      requests_24h: requests24h || numberValue(usageStats?.requests_total),
+      tokens_24h: numberValue(usageStats?.tokens_total),
+      cost_24h: numberValue(usageStats?.cost_usd),
+      latency_avg: numberValue(usageStats?.latency_avg_ms),
       auth_success_rate: successRate, 
-      denial_reason_counts: auditStats?.denial_reason_counts ?? {},
+      denial_reason_counts: denialCounts,
       request_volume_series: auditStats?.request_volume_series ?? [],
       latency_percentiles: auditStats?.latency_percentiles ?? { p50: 10, p95: 20, p99: 50 },
   };
@@ -73,7 +101,7 @@ async function fetchGatewayStatus() {
           CACHE.gatewayStatus = data;
           return data;
       }
-  } catch (e) {}
+  } catch {}
   return null;
 }
 

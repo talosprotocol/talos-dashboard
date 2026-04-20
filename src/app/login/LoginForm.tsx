@@ -13,7 +13,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'login' | 'bootstrap' | 'dev-login'>('dev-login')
+  const [mode, setMode] = useState<'login' | 'bootstrap' | 'dev-login'>('login')
   const [bootstrapToken, setBootstrapToken] = useState('')
 
   async function handleDevLogin() {

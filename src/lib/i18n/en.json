@@ -1,0 +1,24 @@
+{
+  "common": {
+    "platform": "Platform",
+    "dashboard": "Dashboard",
+    "settings": "Settings",
+    "logout": "Logout",
+    "loading": "Loading...",
+    "export": "Export",
+    "filters": "Filters",
+    "clear_all": "Clear All"
+  },
+  "navigation": {
+    "title": "Navigation"
+  },
+  "audit": {
+    "title": "Audit",
+    "subtitle": "Explorer",
+    "description": "Monitor and analyze security audit events across the protocol in real-time.",
+    "no_events": "No audit events found",
+    "no_events_description": "Try adjusting your filters or search criteria to find what you're looking for.",
+    "reconnecting": "Reconnecting to audit stream...",
+    "mode": "Mode"
+  }
+}

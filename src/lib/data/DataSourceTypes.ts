@@ -59,8 +59,60 @@ export interface McpPolicy {
 
 export interface Secret {
     name: string;
+    kek_id?: string; // KEK used to encrypt this secret
     created_at?: string;
     updated_at?: string;
+}
+
+export interface KekStatus {
+    current_kek_id: string;
+    loaded_kek_ids: string[];
+    stale_counts: Record<string, number>;
+}
+
+export interface RotationOperation {
+    id: string;
+    status: "running" | "completed" | "failed";
+    target_kek_id: string;
+    stats: {
+        scanned: number;
+        rotated: number;
+        failed: number;
+    };
+    started_at: string;
+    completed_at?: string;
+    last_error?: string;
+}
+
+export interface ConfigExport {
+    upstreams: Record<string, unknown>;
+    model_groups: Record<string, unknown>;
+    routing_policies: Record<string, unknown>;
+}
+
+export interface RbacScope {
+    scope_type: string;
+    attributes: Record<string, string>;
+}
+
+export interface RbacRole {
+    role_id: string;
+    name: string;
+    permissions: string[];
+    built_in?: boolean;
+    description?: string;
+}
+
+export interface RbacBindingEntry {
+    binding_id: string;
+    role_id: string;
+    scope: RbacScope;
+}
+
+export interface RbacBinding {
+    principal_id: string;
+    team_id?: string;
+    bindings: RbacBindingEntry[];
 }
 
 export interface AuditFilters {
@@ -78,7 +130,7 @@ export type StreamMessage =
     | { type: "cursor_gap"; from: string; to: string };
 
 export interface DataSource {
-    getStats(range: { from: number; to: number }): Promise<DashboardStats>;
+    getStats(): Promise<DashboardStats>;
     getMe(): Promise<UserProfile>;
     
     // LLM Management
@@ -106,6 +158,22 @@ export interface DataSource {
     listSecrets(): Promise<Secret[]>;
     createSecret(name: string, value: string): Promise<void>;
     deleteSecret(name: string): Promise<void>;
+    getKekStatus(): Promise<KekStatus>;
+    rotateAllSecrets(): Promise<RotationOperation>;
+    getRotationStatus(opId: string): Promise<RotationOperation>;
+
+    // Config Management
+    exportConfig(): Promise<ConfigExport>;
+    applyConfig(config: ConfigExport): Promise<void>;
+
+    // RBAC Management
+    listRbacRoles(): Promise<RbacRole[]>;
+    upsertRbacRole(role: RbacRole): Promise<RbacRole>;
+    deleteRbacRole(roleId: string): Promise<void>;
+
+    listRbacBindings(): Promise<RbacBinding[]>;
+    upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding>;
+    deleteRbacBinding(principalId: string): Promise<void>;
 
     listAuditEvents(params: {
         limit: number;

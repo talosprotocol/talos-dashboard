@@ -4,7 +4,6 @@ import path from 'path';
 
 export async function GET() {
   try {
-    const manifestPath = path.join(process.cwd(), '..', '..', 'examples', 'examples_manifest.json');
     // If running in monorepo, check root too
     const possiblePaths = [
       path.join(process.cwd(), 'examples', 'examples_manifest.json'),

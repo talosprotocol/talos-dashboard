@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateRequest } from '@/lib/auth/session';
-import { TALOS_GATEWAY_URL, AUTH_ADMIN_SECRET } from '@/lib/config';
-import { signAdminJwt } from '@/lib/auth/utils';
+import { TALOS_GATEWAY_URL } from '@/lib/config';
+import { getBrokeredAdminToken } from '@/lib/auth/adminTokenBroker';
 
 /**
  * Gateway Status API Proxy
  * Proxies gateway status requests to the backend gateway service
  */
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const gatewayUrl = TALOS_GATEWAY_URL || 'http://localhost:8000';
     
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     } else {
-      sessionData = { user: { id: 'dev-user', role: 'admin' } };
+      sessionData = { user: { id: process.env.AUTH_ADMIN_PRINCIPAL || 'dev-admin', role: 'admin' } };
     }
 
     const headers: HeadersInit = {
@@ -31,14 +31,13 @@ export async function GET(req: NextRequest) {
     if (sessionData?.user) {
       const principalId = sessionData.user.id;
       headers['X-Talos-Principal-Id'] = principalId;
-      
-      // Generate Admin JWT for the Gateway
-      const token = signAdminJwt({
-        sub: principalId,
-        role: sessionData.user.role || 'user',
-        exp: Math.floor(Date.now() / 1000) + 300 // 5 min expiry
-      }, AUTH_ADMIN_SECRET);
-      
+
+      const token = await getBrokeredAdminToken({
+        principal: principalId,
+        permissions: ["llm.read"],
+        sessionId: sessionData.session?.id,
+      });
+
       headers['Authorization'] = `Bearer ${token}`;
     }
 

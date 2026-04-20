@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Activity, Server, Database, MessageSquare, Zap, AlertTriangle, CheckCircle, HelpCircle } from "lucide-react";
+import { Server, Database, MessageSquare, Zap, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 type ServiceState = "ONLINE" | "OFFLINE" | "DEGRADED" | "UNKNOWN";
@@ -12,6 +12,16 @@ interface ServiceStatus {
     state: ServiceState;
     latency_ms?: number;
     error_code?: string;
+}
+
+interface RawServiceStatus {
+    state?: ServiceState;
+    latency_ms?: number;
+    error_code?: string;
+}
+
+interface ServiceHealthResponse {
+    services?: Record<string, RawServiceStatus>;
 }
 
 export function ServiceHealthOverview() {
@@ -27,10 +37,10 @@ export function ServiceHealthOverview() {
         try {
             const res = await fetch("/api/status");
             if (res.ok) {
-                const data = await res.json();
-                const mapped = Object.entries(data.services).map(([name, status]: [string, any]) => ({
+                const data = (await res.json()) as ServiceHealthResponse;
+                const mapped = Object.entries(data.services ?? {}).map(([name, status]) => ({
                     name,
-                    state: status.state as ServiceState,
+                    state: status.state ?? "UNKNOWN",
                     latency_ms: status.latency_ms,
                     error_code: status.error_code,
                 }));
