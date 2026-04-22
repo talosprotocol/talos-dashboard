@@ -16,6 +16,9 @@ const READ_PERMISSION_BY_ROOT: Record<string, string> = {
   secrets: "keys.read",
   telemetry: "audit.read",
   usage: "llm.read",
+  budgets: "audit.read",
+  keys: "platform.admin",
+  teams: "platform.admin",
 };
 
 function uniquePermissions(permissions: readonly string[]): string[] {

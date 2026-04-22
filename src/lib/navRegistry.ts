@@ -117,6 +117,13 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "admin",
         parent: null,
     },
+    "/admin/budgets": {
+        label: "Budgets & Keys",
+        icon: "💰",
+        ariaLabel: "Budget and Virtual Key Management",
+        group: "admin",
+        parent: null,
+    },
     "/settings": {
         label: "Settings",
         icon: "⚙️",

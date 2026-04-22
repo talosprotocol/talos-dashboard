@@ -115,6 +115,35 @@ export interface RbacBinding {
     bindings: RbacBindingEntry[];
 }
 
+export interface BudgetScope {
+    scope_type: string;
+    scope_id: string;
+    limit_usd: string;
+    used_usd: string;
+    reserved_usd: string;
+}
+
+export interface VirtualKey {
+    id: string;
+    team_id: string;
+    budget_mode: string;
+    budget: {
+        limit_usd: string;
+    };
+    overdraft_usd: string;
+    revoked: boolean;
+}
+
+export interface Team {
+    id: string;
+    name: string;
+    budget_mode: string;
+    budget: {
+        limit_usd: string;
+    };
+    overdraft_usd: string;
+}
+
 export interface AuditFilters {
     correlation_id?: string;
     session_id?: string;
@@ -183,6 +212,11 @@ export interface DataSource {
     getGatewayStatus(): Promise<GatewayStatus>;
     subscribe(cb: (msg: StreamMessage) => void, filters?: AuditFilters): () => void;
     exportEvidence?(params: { cursor_range?: { start?: string; end?: string }, filters?: AuditFilters }): Promise<EvidenceBundle>;
+
+    // Budget Management
+    listBudgetScopes(): Promise<BudgetScope[]>;
+    listVirtualKeys(): Promise<VirtualKey[]>;
+    listTeams(): Promise<Team[]>;
 
     // Chat / Playground
     chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>>;

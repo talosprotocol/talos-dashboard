@@ -30,6 +30,9 @@ async function handle(
   if (DATA_SOURCE_MODE === 'MOCK') {
     const mock = new MockDataSource();
     if (path === 'me') return NextResponse.json(mock.getAdminMe());
+    if (path === 'budgets/scopes') return NextResponse.json({ scopes: await mock.listBudgetScopes() });
+    if (path === 'keys') return NextResponse.json({ keys: await mock.listVirtualKeys() });
+    if (path === 'teams') return NextResponse.json({ teams: await mock.listTeams() });
     return NextResponse.json({ error: 'Mock not implemented for this path' }, { status: 501 });
   }
 

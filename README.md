@@ -82,3 +82,8 @@ The supported bootstrap path is the passkey/device flow on `/login`, which suppo
 - [Development](docs/wiki/Development.md)
 - [Features](docs/wiki/Features.md)
 - [API](docs/wiki/API.md)
+
+## License
+
+Talos Security Dashboard is distributed under the Apache License 2.0. See
+`LICENSE` and `NOTICE` in this repository for details.

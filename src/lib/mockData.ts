@@ -51,6 +51,35 @@ interface AdminUser {
   roles: string[];
 }
 
+interface BudgetScope {
+  scope_type: string;
+  scope_id: string;
+  limit_usd: string;
+  used_usd: string;
+  reserved_usd: string;
+}
+
+interface VirtualKey {
+  id: string;
+  team_id: string;
+  budget_mode: string;
+  budget: {
+    limit_usd: string;
+  };
+  overdraft_usd: string;
+  revoked: boolean;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  budget_mode: string;
+  budget: {
+    limit_usd: string;
+  };
+  overdraft_usd: string;
+}
+
 /**
  * Generate a UUIDv7 (time-ordered UUID)
  * Format: xxxxxxxx-xxxx-7xxx-yxxx-xxxxxxxxxxxx
@@ -225,5 +254,25 @@ export class MockDataSource {
       name: 'Mock User (Development)',
       roles: ['admin'],
     };
+  }
+
+  async listBudgetScopes(): Promise<BudgetScope[]> {
+    return [
+      { scope_type: "global", scope_id: "platform", limit_usd: "100.00", used_usd: "42.50", reserved_usd: "5.00" },
+      { scope_type: "team", scope_id: "engineering", limit_usd: "50.00", used_usd: "12.20", reserved_usd: "1.50" },
+    ];
+  }
+
+  async listVirtualKeys(): Promise<VirtualKey[]> {
+    return [
+      { id: "key_prod_1", team_id: "engineering", budget_mode: "hard", budget: { limit_usd: "10.00" }, overdraft_usd: "0.00", revoked: false },
+      { id: "key_dev_2", team_id: "engineering", budget_mode: "soft", budget: { limit_usd: "5.00" }, overdraft_usd: "2.10", revoked: false },
+    ];
+  }
+
+  async listTeams(): Promise<Team[]> {
+    return [
+      { id: "engineering", name: "Engineering Core", budget_mode: "hard", budget: { limit_usd: "50.00" }, overdraft_usd: "0.00" },
+    ];
   }
 }

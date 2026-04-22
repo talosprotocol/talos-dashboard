@@ -1,4 +1,4 @@
-import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret, RbacRole, RbacBinding, KekStatus, RotationOperation, ConfigExport } from "./DataSourceTypes";
+import { AuditFilters, DashboardStats, DataSource, StreamMessage, UserProfile, Upstream, ModelGroup, McpServer, McpPolicy, Secret, RbacRole, RbacBinding, KekStatus, RotationOperation, ConfigExport, BudgetScope, VirtualKey, Team } from "./DataSourceTypes";
 import { AuditEvent, GatewayStatus, CursorPage } from "./schemas";
 import { checkCursorContinuity, type CursorGap } from "@talosprotocol/contracts";
 import { validateCursor } from "../integrity/cursor";
@@ -359,6 +359,28 @@ export class HttpDataSource implements DataSource {
             method: "DELETE"
         });
         if (!res.ok) throw new Error("Failed to delete RBAC binding");
+    }
+
+    // Budget Management
+    async listBudgetScopes(): Promise<BudgetScope[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/budgets/scopes`);
+        if (!res.ok) throw new Error("Failed to list budget scopes");
+        const data = await res.json();
+        return data.scopes || [];
+    }
+
+    async listVirtualKeys(): Promise<VirtualKey[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/keys`);
+        if (!res.ok) throw new Error("Failed to list virtual keys");
+        const data = await res.json();
+        return data.keys || [];
+    }
+
+    async listTeams(): Promise<Team[]> {
+        const res = await fetch(`${this.baseUrl}/admin/v1/teams`);
+        if (!res.ok) throw new Error("Failed to list teams");
+        const data = await res.json();
+        return data.teams || [];
     }
 
     async getStats(): Promise<DashboardStats> {

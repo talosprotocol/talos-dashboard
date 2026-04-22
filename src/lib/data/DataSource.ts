@@ -23,7 +23,10 @@ import {
     RotationOperation,
     ConfigExport,
     RbacRole,
-    RbacBinding
+    RbacBinding,
+    BudgetScope,
+    VirtualKey,
+    Team
 } from "./DataSourceTypes";
 import { HttpDataSource } from "./HttpDataSource";
 import { deriveCursor, decodeCursor } from "../integrity/cursor";
@@ -180,6 +183,25 @@ class MockDataSource implements DataSource {
     }
     async upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding> { return binding; }
     async deleteRbacBinding(_principalId: string): Promise<void> {}
+
+    // Budget Management
+    async listBudgetScopes(): Promise<BudgetScope[]> {
+        return [
+            { scope_type: "global", scope_id: "platform", limit_usd: "100.00", used_usd: "42.50", reserved_usd: "5.00" },
+            { scope_type: "team", scope_id: "engineering", limit_usd: "50.00", used_usd: "12.20", reserved_usd: "1.50" },
+        ];
+    }
+    async listVirtualKeys(): Promise<VirtualKey[]> {
+        return [
+            { id: "key_prod_1", team_id: "engineering", budget_mode: "hard", budget: { limit_usd: "10.00" }, overdraft_usd: "0.00", revoked: false },
+            { id: "key_dev_2", team_id: "engineering", budget_mode: "soft", budget: { limit_usd: "5.00" }, overdraft_usd: "2.10", revoked: false },
+        ];
+    }
+    async listTeams(): Promise<Team[]> {
+        return [
+            { id: "engineering", name: "Engineering Core", budget_mode: "hard", budget: { limit_usd: "50.00" }, overdraft_usd: "0.00" },
+        ];
+    }
 
     async chatCompletion(_apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
         return {
@@ -360,6 +382,11 @@ export class SqliteDataSource implements DataSource {
     async listRbacBindings(): Promise<RbacBinding[]> { return new MockDataSource().listRbacBindings(); }
     async upsertRbacBinding(binding: RbacBinding): Promise<RbacBinding> { return new MockDataSource().upsertRbacBinding(binding); }
     async deleteRbacBinding(principalId: string): Promise<void> { return new MockDataSource().deleteRbacBinding(principalId); }
+
+    // Budget Management
+    async listBudgetScopes(): Promise<BudgetScope[]> { return new MockDataSource().listBudgetScopes(); }
+    async listVirtualKeys(): Promise<VirtualKey[]> { return new MockDataSource().listVirtualKeys(); }
+    async listTeams(): Promise<Team[]> { return new MockDataSource().listTeams(); }
 
     async chatCompletion(apiKey: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
         return new MockDataSource().chatCompletion(apiKey, body);

@@ -7,7 +7,7 @@ import { DenialTaxonomyChart } from "@/components/dashboard/DenialTaxonomyChart"
 import { RequestVolumeChart } from "@/components/dashboard/RequestVolumeChart";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { useDataSource } from "@/lib/hooks/useDataSource";
-import { Settings, Shield, Zap, LayoutDashboard, Database, Activity, Lock, Terminal } from "lucide-react";
+import { Settings, Shield, Zap, LayoutDashboard, Database, Activity, Lock, Terminal, Wallet } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -61,6 +61,13 @@ export default function ManagementContent() {
                     >
                         <Shield className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400" />
                         Governance Agent
+                    </Link>
+                    <Link
+                        href="/admin/budgets"
+                        className="px-4 py-2.5 text-[10px] font-black uppercase tracking-widest bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-slate-400 hover:text-white rounded-xl transition-all duration-300 flex items-center gap-2 group"
+                    >
+                        <Wallet className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400" />
+                        Budgets & Keys
                     </Link>
                     <Link
                         href="/configuration"

@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, BarChart3, Settings, FileText, Activity, Terminal, LayoutDashboard, Database, Lock, Play, Zap, Bot, LucideIcon } from 'lucide-react';
+import { Shield, BarChart3, Settings, FileText, Activity, Terminal, LayoutDashboard, Database, Lock, Play, Zap, Bot, Wallet, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NAV_REGISTRY, NavItem, isActiveRoute } from '@/lib/navRegistry';
 
@@ -22,6 +22,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   "📈": BarChart3,
   "🚀": Zap,
   "🤖": Bot,
+  "💰": Wallet,
 };
 
 interface DashboardSidebarProps {
