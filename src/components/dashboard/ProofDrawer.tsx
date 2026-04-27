@@ -53,13 +53,24 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
         }
     };
 
+    const badge = computeProofBadge(event.integrity);
+    const isTampered = badge === "FAILED" || event.integrity?.failure_reason === "CURSOR_MISMATCH";
+
     return (
-        <div className="fixed inset-y-0 right-0 w-[480px] bg-[var(--bg)] border-l border-[var(--glass-border)] shadow-2xl backdrop-blur-xl z-50 p-6 flex flex-col transform transition-transform duration-300">
+        <div className={cn(
+            "fixed inset-y-0 right-0 w-[480px] bg-[var(--bg)] border-l border-[var(--glass-border)] shadow-2xl backdrop-blur-xl z-50 p-6 flex flex-col transform transition-transform duration-300",
+            isTampered && "border-l-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+        )}>
+            {/* Background Tint for Tampering */}
+            {isTampered && (
+                <div className="absolute inset-0 bg-red-500/[0.03] pointer-events-none" />
+            )}
+
             {/* Header */}
-            <div className="flex items-start justify-between mb-8">
+            <div className="flex items-start justify-between mb-8 relative z-10">
                 <div>
                     <h2 className="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-[var(--accent)]" />
+                        <Shield className={cn("w-5 h-5", isTampered ? "text-red-500" : "text-[var(--accent)]")} />
                         Audit Proof
                     </h2>
                     <div className="text-xs text-[var(--text-muted)] font-mono mt-1">{event.event_id}</div>
@@ -69,7 +80,7 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-6">
+            <div className="flex-1 overflow-y-auto space-y-6 relative z-10">
                 {/* 1. Integrity State Machine */}
                 <section>
                     <h3 className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold mb-3 flex justify-between items-center">
@@ -86,11 +97,18 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                     </h3>
 
                     {/* CRITICAL OVERLAY */}
-                    {event.integrity?.failure_reason === "CURSOR_MISMATCH" && (
-                        <GlassPanel className="mb-4 px-3 py-2 flex items-center gap-2 text-white bg-red-600 border-red-500 animate-pulse font-bold shadow-lg shadow-red-900/50">
-                            <ShieldAlert className="w-4 h-4" />
-                            <span>CRITICAL: CURSOR MISMATCH</span>
-                        </GlassPanel>
+                    {isTampered && (
+                        <div className="space-y-3 mb-6">
+                            <GlassPanel className="px-3 py-3 flex flex-col gap-2 text-white bg-red-600 border-red-500 animate-pulse font-bold shadow-lg shadow-red-900/50">
+                                <div className="flex items-center gap-2">
+                                    <ShieldAlert className="w-5 h-5" />
+                                    <span className="text-sm tracking-tight">REMEDIATION REQUIRED: DATA TAMPERING DETECTED</span>
+                                </div>
+                            </GlassPanel>
+                            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-[11px] text-red-200 leading-relaxed italic">
+                                &quot;The cryptographic chain of custody for this event has been broken. This usually indicates manual database modification or a compromised audit node. Segregate this actor immediately.&quot;
+                            </div>
+                        </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-3">

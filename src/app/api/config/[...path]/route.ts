@@ -4,7 +4,7 @@ import { createRecastRequest } from "@/lib/proxy";
 export const runtime = 'nodejs';
 
 // Configuration
-const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8000";
+const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8003";
 const SERVICE_TOKEN = process.env.TALOS_SERVICE_TOKEN; 
 // const UPSTREAM_PREFIX = '/v1'; // Uncommon if base is localhost:8000/api/config? 
 // Current routes.py seems to listen on /api/config.

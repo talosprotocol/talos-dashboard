@@ -19,6 +19,27 @@ export type NavItem = {
  * Note: Examples require backends to be running separately.
  */
 export const NAV_REGISTRY: Record<string, NavItem> = {
+    "/api-workbench": {
+        label: "API Workbench",
+        icon: "🛠️",
+        ariaLabel: "Dashboard API Workbench",
+        group: "core",
+        parent: null,
+    },
+    "/agent": {
+        label: "Agent",
+        icon: "🤖",
+        ariaLabel: "Secure Agent Console",
+        group: "core",
+        parent: null,
+    },
+    "/configuration": {
+        label: "Configuration",
+        icon: "⚙️",
+        ariaLabel: "Configuration Workspace",
+        group: "core",
+        parent: null,
+    },
     "/console": {
         label: "Console",
         icon: "📊",
@@ -151,6 +172,20 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         ariaLabel: "DevOps Agent Demo",
         group: "demos",
         parent: "/examples",
+    },
+    "/gateway": {
+        label: "Gateway",
+        icon: "🔌",
+        ariaLabel: "Gateway Status Detail",
+        group: "core",
+        parent: null,
+    },
+    "/sessions": {
+        label: "Sessions",
+        icon: "📜",
+        ariaLabel: "Session Activity Explorer",
+        group: "core",
+        parent: null,
     },
 };
 

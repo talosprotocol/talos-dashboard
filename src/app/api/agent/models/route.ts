@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8090";
+const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8100";
 
 export async function GET() {
   try {

@@ -15,6 +15,11 @@ export function KPIGrid({ stats }: KPIGridProps) {
         ? (1 - stats.auth_success_rate) * 100
         : 0;
 
+    // Calculate System Threat Level
+    const threatLevel = denialRate > 15 ? "CRITICAL" : denialRate > 5 ? "ELEVATED" : "SECURE";
+    const threatColor = threatLevel === "CRITICAL" ? "text-rose-500" : threatLevel === "ELEVATED" ? "text-amber-500" : "text-emerald-500";
+    const threatIcon = threatLevel === "CRITICAL" ? <ShieldAlert className="text-rose-400" /> : threatLevel === "ELEVATED" ? <ShieldAlert className="text-amber-400" /> : <ShieldCheck className="text-emerald-400" />;
+
     const container = {
         hidden: { opacity: 0 },
         show: {
@@ -35,8 +40,16 @@ export function KPIGrid({ stats }: KPIGridProps) {
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6"
+            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-6"
         >
+            <KPI
+                variants={item}
+                label="System Status"
+                value={threatLevel}
+                icon={threatIcon}
+                trend={threatLevel === "SECURE" ? "Protected" : "Active Threats"}
+                trendUp={threatLevel === "SECURE"}
+            />
             <KPI
                 variants={item}
                 label="Total Requests"

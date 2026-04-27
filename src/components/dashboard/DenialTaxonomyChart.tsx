@@ -96,10 +96,15 @@ export function DenialTaxonomyChart({ data }: DenialTaxonomyChartProps) {
                             padding: "8px 12px"
                         }}
                         itemStyle={{ color: "#fff" }}
-                        formatter={(value: number | undefined, name: string | undefined) => [
-                            <span key="val" className="font-bold text-white">{value ?? 0} <span key="pct" className="text-[10px] text-slate-400 font-normal">({(((value ?? 0) / total) * 100).toFixed(1)}%)</span></span>,
-                            <span key="name" className="text-slate-300 mr-2">{name}</span>
-                        ]}
+                        formatter={(value, name) => {
+                            const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+                            const label = typeof name === "string" ? name : String(name ?? "");
+
+                            return [
+                                <span key="val" className="font-bold text-white">{numericValue} <span key="pct" className="text-[10px] text-slate-400 font-normal">({((numericValue / total) * 100).toFixed(1)}%)</span></span>,
+                                <span key="name" className="text-slate-300 mr-2">{label}</span>
+                            ];
+                        }}
                     />
                     <Legend
                         layout="vertical"

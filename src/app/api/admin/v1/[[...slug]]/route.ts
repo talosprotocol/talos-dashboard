@@ -33,6 +33,24 @@ async function handle(
     if (path === 'budgets/scopes') return NextResponse.json({ scopes: await mock.listBudgetScopes() });
     if (path === 'keys') return NextResponse.json({ keys: await mock.listVirtualKeys() });
     if (path === 'teams') return NextResponse.json({ teams: await mock.listTeams() });
+    if (path === 'mcp/policies') return NextResponse.json({ policies: await mock.listMcpPolicies() });
+    
+    // Mission Control / Console Mocks
+    if (path === 'telemetry/stats') return NextResponse.json({
+        requests_total: 1250,
+        tokens_total: 625000,
+        cost_usd: 9.375,
+        latency_avg_ms: 8.5
+    });
+    if (path === 'audit/stats') return NextResponse.json({
+        requests_24h: 1250,
+        denial_reason_counts: { "AUTH_INVALID": 12, "RATE_LIMIT": 5 },
+        request_volume_series: [],
+        latency_percentiles: { p50: 5, p95: 15, p99: 40 }
+    });
+    if (path === 'audit/events') return NextResponse.json(await mock.listAuditEvents({ limit: 20 }));
+    if (path === 'gateway/status') return NextResponse.json(await mock.getGatewayStatus());
+
     return NextResponse.json({ error: 'Mock not implemented for this path' }, { status: 501 });
   }
 

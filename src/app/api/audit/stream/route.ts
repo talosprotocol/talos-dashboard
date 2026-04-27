@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth/session";
 import { getBrokeredAdminToken } from "@/lib/auth/adminTokenBroker";
+import { DATA_SOURCE_MODE } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs"; // Required for streaming
@@ -18,13 +19,44 @@ export const runtime = "nodejs"; // Required for streaming
 // Configuration
 // =============================================================================
 
-const AUDIT_URL = process.env.TALOS_AUDIT_URL ?? "http://talos-audit-service:8000";
+const AUDIT_URL = process.env.TALOS_AUDIT_URL ?? "http://talos-audit-service:8002";
 
 // =============================================================================
 // Route Handler
 // =============================================================================
 
 export async function GET(req: NextRequest): Promise<Response> {
+  // Mock mode support
+  if (DATA_SOURCE_MODE === 'MOCK') {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        const mockEvent = {
+          type: "audit_event",
+          event: {
+            event_id: "evt_mock_1",
+            timestamp: Math.floor(Date.now() / 1000),
+            outcome: "OK",
+            principal_id: "mock-user",
+            action: "llm.chat",
+            resource: "gpt-4",
+            correlation_id: "corr_1"
+          }
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(mockEvent)}\n\n`));
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
   // ---------------------------------------------
   // Auth Check (bypass in dev mode)
   // ---------------------------------------------

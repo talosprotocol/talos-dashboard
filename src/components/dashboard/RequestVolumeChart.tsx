@@ -97,11 +97,16 @@ export function RequestVolumeChart({ data }: RequestVolumeChartProps) {
                             boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
                         }}
                         labelStyle={{ color: "#fff", fontWeight: "bold", marginBottom: "4px" }}
-                        labelFormatter={(value) => `${formatDate(value)} ${formatTime(value)}`}
-                        formatter={(value: number | undefined, name: string | undefined) => {
-                            const label = name === "ok" ? "Success" : name === "deny" ? "Denied" : "Error";
-                            const color = name === "ok" ? "#10b981" : name === "deny" ? "#ef4444" : "#f59e0b";
-                            return [<span key="val" className="font-bold" style={{ color }}>{value ?? 0}</span>, <span key="label" className="text-slate-400">{label}</span>];
+                        labelFormatter={(value) => {
+                            const timestamp = typeof value === "number" ? value : Number(value ?? 0);
+                            return `${formatDate(timestamp)} ${formatTime(timestamp)}`;
+                        }}
+                        formatter={(value, name) => {
+                            const numericValue = typeof value === "number" ? value : Number(value ?? 0);
+                            const dataKey = typeof name === "string" ? name : String(name ?? "");
+                            const label = dataKey === "ok" ? "Success" : dataKey === "deny" ? "Denied" : "Error";
+                            const color = dataKey === "ok" ? "#10b981" : dataKey === "deny" ? "#ef4444" : "#f59e0b";
+                            return [<span key="val" className="font-bold" style={{ color }}>{numericValue}</span>, <span key="label" className="text-slate-400">{label}</span>];
                         }}
                     />
                     <Area

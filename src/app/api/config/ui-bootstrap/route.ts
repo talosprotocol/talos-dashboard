@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { VERSION as CLIENT_CONTRACTS_VERSION } from "@talosprotocol/contracts";
 import { DATA_SOURCE_MODE } from "@/lib/config";
 
-const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8000";
+const UPSTREAM = process.env.TALOS_CONFIGURATION_URL || "http://localhost:8003";
 
 export const runtime = 'nodejs';
 

@@ -21,7 +21,7 @@ describe("admin token broker", () => {
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("TALOS_GATEWAY_URL", "http://gateway.local:8000");
+    vi.stubEnv("TALOS_GATEWAY_URL", "http://gateway.local:8001");
     vi.stubEnv("AUTH_ADMIN_SECRET", "broker-secret");
 
     const { getBrokeredAdminToken, clearAdminTokenBrokerCacheForTests } = await import(
@@ -48,7 +48,7 @@ describe("admin token broker", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toBe("http://gateway.local:8000/admin/v1/auth/token");
+    expect(String(url)).toBe("http://gateway.local:8001/admin/v1/auth/token");
     expect(init?.headers).toMatchObject({
       "X-Talos-Admin-Secret": "broker-secret",
       "Content-Type": "application/json",
@@ -79,7 +79,7 @@ describe("admin token broker", () => {
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("TALOS_GATEWAY_URL", "http://gateway.local:8000");
+    vi.stubEnv("TALOS_GATEWAY_URL", "http://gateway.local:8001");
     vi.stubEnv("AUTH_ADMIN_SECRET", "broker-secret");
 
     const { getBrokeredAdminToken, clearAdminTokenBrokerCacheForTests } = await import(

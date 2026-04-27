@@ -10,6 +10,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 export default function ModelGroupsPage() {
     const [groups, setGroups] = useState<ModelGroup[]>([]);
     const [loading, setLoading] = useState(true);
+    const [togglingIds, setTogglingIds] = useState<Record<string, boolean>>({});
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<ModelGroup | null>(null);
     const [saving, setSaving] = useState(false);
@@ -79,6 +80,29 @@ export default function ModelGroupsPage() {
                 description: `Failed to delete model group: ${err}`,
                 variant: "destructive"
             });
+        }
+    };
+
+    const handleToggle = async (group: ModelGroup) => {
+        setTogglingIds(prev => ({ ...prev, [group.id]: true }));
+        try {
+            const result = await dataSource.updateModelGroup(
+                group.id,
+                { enabled: !group.enabled },
+                group.version
+            );
+            setGroups(prev =>
+                prev.map(g => g.id === group.id ? { ...g, ...result } : g)
+            );
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            toast({
+                title: "Toggle Failed",
+                description: `Failed to update model group state: ${msg}`,
+                variant: "destructive"
+            });
+        } finally {
+            setTogglingIds(prev => ({ ...prev, [group.id]: false }));
         }
     };
 
@@ -154,16 +178,24 @@ export default function ModelGroupsPage() {
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
                                                 onClick={() => handleOpenEdit(g)}
+                                                disabled={Boolean(togglingIds[g.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-[var(--accent)]"
                                                 title="Edit Group"
                                             >
                                                 <Edit2 size={16} />
                                             </button>
-                                            <button className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-emerald-500">
+                                            <button
+                                                onClick={() => handleToggle(g)}
+                                                disabled={Boolean(togglingIds[g.id])}
+                                                aria-label={`${g.enabled ? "Disable" : "Enable"} model group ${g.id}`}
+                                                title={`${g.enabled ? "Disable" : "Enable"} model group ${g.id}`}
+                                                className={`p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] ${g.enabled ? "hover:text-rose-500" : "hover:text-emerald-500"} disabled:opacity-50`}
+                                            >
                                                 <Power size={16} />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(g.id)}
+                                                disabled={Boolean(togglingIds[g.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-rose-500"
                                             >
                                                 <Trash2 size={16} />

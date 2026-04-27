@@ -5,6 +5,7 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { dataSource } from "@/lib/data/DataSource";
 import type { Secret, KekStatus, RotationOperation } from "@/lib/data/DataSourceTypes";
 import { GlassPanel } from "@/components/ui/GlassPanel";
+import { cn } from "@/lib/cn";
 import { Plus, Trash2, Key, Search, ShieldCheck, RefreshCw, AlertTriangle, CheckCircle2, Clock, Lock } from "lucide-react";
 import { AdminModal } from "@/components/admin/AdminModal";
 
@@ -162,9 +163,12 @@ export default function SecretsContent() {
                                 {kekStatus?.current_kek_id || "Loading…"}
                             </div>
                             {kekStatus && (
-                                <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase">
-                                    Active
-                                </span>
+                                <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tight">
+                                        Active
+                                    </span>
+                                </div>
                             )}
                         </div>
                         {kekStatus && (
@@ -262,6 +266,7 @@ export default function SecretsContent() {
                             <SecretRow
                                 key={secret.name}
                                 secret={secret}
+                                currentKekId={kekStatus?.current_kek_id}
                                 onDelete={() => handleDelete(secret.name)}
                             />
                         ))}
@@ -311,33 +316,55 @@ export default function SecretsContent() {
 }
 
 function SecretRow({
-    secret, onDelete
-}: { secret: Secret; onDelete: () => void }) {
+    secret, onDelete, currentKekId
+}: { secret: Secret; onDelete: () => void; currentKekId?: string }) {
+    const isStale = currentKekId && secret.kek_id && secret.kek_id !== currentKekId;
+
     return (
-        <div className="group flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
-            <div className="flex items-center gap-3 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0">
-                    <Key size={13} className="text-cyan-400" />
+        <div className={cn(
+            "group flex items-center justify-between px-4 py-3 rounded-xl border transition-all",
+            isStale 
+                ? "bg-amber-500/[0.03] border-amber-500/20 hover:bg-amber-500/[0.06] hover:border-amber-500/30" 
+                : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
+        )}>
+            <div className="flex items-center gap-4 min-w-0">
+                <div className={cn(
+                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
+                    isStale ? "bg-amber-500/10 text-amber-500" : "bg-cyan-500/10 text-cyan-400"
+                )}>
+                    {isStale ? <AlertTriangle size={16} /> : <Key size={16} />}
                 </div>
                 <div className="min-w-0">
-                    <div className="text-sm font-mono font-bold text-slate-200 truncate">{secret.name}</div>
-                    <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mt-0.5">
-                        {secret.updated_at ? `Updated ${new Date(secret.updated_at).toLocaleDateString()}` : "Active"}
+                    <div className="flex items-center gap-2">
+                        <div className="text-sm font-mono font-bold text-white truncate">{secret.name}</div>
+                        {isStale && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[8px] font-black text-amber-500 uppercase tracking-tight animate-pulse">
+                                Stale
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-[10px] font-medium text-slate-500 mt-0.5">
+                        {secret.updated_at ? `Synchronized ${new Date(secret.updated_at).toLocaleDateString()}` : "Ready"}
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-                {secret.kek_id && (
-                    <span className="text-[9px] font-black text-slate-600 bg-white/5 px-1.5 py-0.5 rounded font-mono">
-                        {secret.kek_id.slice(0, 8)}…
-                    </span>
-                )}
+            <div className="flex items-center gap-4 shrink-0">
+                <div className="hidden md:flex flex-col items-end">
+                    <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Encryption Key</div>
+                    {secret.kek_id ? (
+                        <div className="text-[10px] font-mono font-bold text-slate-400 bg-black/20 px-2 py-0.5 rounded border border-white/5">
+                            {secret.kek_id.slice(0, 12)}…
+                        </div>
+                    ) : (
+                        <span className="text-[10px] text-slate-700 italic">None</span>
+                    )}
+                </div>
                 <button
                     onClick={onDelete}
                     aria-label={`Delete ${secret.name}`}
-                    className="p-1.5 rounded-lg text-slate-700 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                    className="p-2 rounded-xl text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
                 >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                 </button>
             </div>
         </div>

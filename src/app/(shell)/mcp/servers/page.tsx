@@ -10,6 +10,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 export default function McpServersPage() {
     const [servers, setServers] = useState<McpServer[]>([]);
     const [loading, setLoading] = useState(true);
+    const [togglingIds, setTogglingIds] = useState<Record<string, boolean>>({});
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<McpServer | null>(null);
     const [saving, setSaving] = useState(false);
@@ -82,6 +83,29 @@ export default function McpServersPage() {
         }
     };
 
+    const handleToggle = async (server: McpServer) => {
+        setTogglingIds(prev => ({ ...prev, [server.id]: true }));
+        try {
+            const result = await dataSource.updateMcpServer(
+                server.id,
+                { enabled: !server.enabled },
+                server.version
+            );
+            setServers(prev =>
+                prev.map(s => s.id === server.id ? { ...s, ...result } : s)
+            );
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            toast({
+                title: "Toggle Failed",
+                description: `Failed to update MCP server state: ${msg}`,
+                variant: "destructive"
+            });
+        } finally {
+            setTogglingIds(prev => ({ ...prev, [server.id]: false }));
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -144,16 +168,24 @@ export default function McpServersPage() {
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
                                                 onClick={() => handleOpenEdit(s)}
+                                                disabled={Boolean(togglingIds[s.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-[var(--accent)]"
                                                 title="Edit Server"
                                             >
                                                 <Edit2 size={16} />
                                             </button>
-                                            <button className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-emerald-500">
+                                            <button
+                                                onClick={() => handleToggle(s)}
+                                                disabled={Boolean(togglingIds[s.id])}
+                                                aria-label={`${s.enabled ? "Disable" : "Enable"} MCP server ${s.id}`}
+                                                title={`${s.enabled ? "Disable" : "Enable"} MCP server ${s.id}`}
+                                                className={`p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] ${s.enabled ? "hover:text-rose-500" : "hover:text-emerald-500"} disabled:opacity-50`}
+                                            >
                                                 <Power size={16} />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(s.id)}
+                                                disabled={Boolean(togglingIds[s.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-rose-500"
                                             >
                                                 <Trash2 size={16} />

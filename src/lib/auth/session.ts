@@ -5,10 +5,13 @@ import { cookies } from 'next/headers';
 import 'server-only';
 import { b64urlToBytes, bytesToB64url, generateRandomBytes, hmac, sha256 } from './utils';
 import { timingSafeEqual } from 'crypto';
+import { isDashboardAuthDisabled } from './mode';
 
 const COOKIE_NAME = process.env.NODE_ENV === 'production' ? '__Host-talos.sid' : 'talos.sid';
 // Default 7 days
 const SESSION_TTL = 60 * 60 * 24 * 7; 
+const AUTH_BYPASS_USER_ID = '00000000-0000-4000-8000-000000000001';
+const AUTH_BYPASS_SESSION_ID = '00000000-0000-4000-8000-000000000002';
 
 // Secret must be 32+ bytes, base64url encoded
 const SECRET_B64 = process.env.AUTH_COOKIE_HMAC_SECRET || '';
@@ -18,6 +21,30 @@ function getSecretBytes(): Buffer {
         throw new Error('AUTH_COOKIE_HMAC_SECRET is not set');
     }
     return b64urlToBytes(SECRET_B64);
+}
+
+function createAuthBypassSession() {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TTL * 1000);
+
+    return {
+        session: {
+            id: AUTH_BYPASS_SESSION_ID,
+            userId: AUTH_BYPASS_USER_ID,
+            tokenHash: Buffer.alloc(0),
+            expiresAt,
+            revokedAt: null,
+            createdAt: now,
+            lastSeenAt: now,
+        },
+        user: {
+            id: AUTH_BYPASS_USER_ID,
+            email: process.env.ADMIN_EMAIL || 'admin@talos.local',
+            role: 'admin',
+            createdAt: now,
+            lastLoginAt: now,
+        },
+    };
 }
 
 export async function createSession(userId: string) {
@@ -61,6 +88,10 @@ export async function createSession(userId: string) {
 }
 
 export async function validateRequest() {
+    if (isDashboardAuthDisabled()) {
+        return createAuthBypassSession();
+    }
+
     const cookieStore = await cookies();
     const cookie = cookieStore.get(COOKIE_NAME);
     
@@ -123,6 +154,13 @@ export async function validateRequest() {
 
 export async function invalidateSession() {
     const cookieStore = await cookies();
+
+    if (isDashboardAuthDisabled()) {
+        cookieStore.delete(COOKIE_NAME);
+        cookieStore.delete('talos.sid');
+        return;
+    }
+
     const cookie = cookieStore.get(COOKIE_NAME);
     if (!cookie) return;
     

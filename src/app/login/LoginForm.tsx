@@ -16,6 +16,12 @@ export default function LoginForm() {
   const [mode, setMode] = useState<'login' | 'bootstrap' | 'dev-login'>('login')
   const [bootstrapToken, setBootstrapToken] = useState('')
 
+  React.useEffect(() => {
+    if (process.env.NEXT_PUBLIC_DISABLE_LOGIN === 'true') {
+        router.push('/console');
+    }
+  }, [router]);
+
   async function handleDevLogin() {
     setIsPending(true)
     setError(null)

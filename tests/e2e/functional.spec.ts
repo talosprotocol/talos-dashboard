@@ -1,17 +1,26 @@
 import { test, expect } from '@playwright/test';
 
+const authDisabled = process.env.TALOS_AUTH_REQUIRED !== 'true';
+
 test.describe('Dashboard Functional UI Tests', () => {
   
   test.beforeEach(async ({ page }) => {
+    if (authDisabled) {
+      await page.goto('/console');
+      return;
+    }
+
     // Perform Dev Login before each functional test
     await page.goto('/login');
-    const devLoginButton = page.locator('button:has-text("Dev Login (Email/Password)")');
-    if (await devLoginButton.isVisible()) {
-      await devLoginButton.click();
+    // Try to find the dev login switch button, sometimes it's an alternate mode
+    const devLoginBtn = page.locator('button', { hasText: 'Dev Login (Email/Password)' });
+    if (await devLoginBtn.isVisible()) {
+        await devLoginBtn.click();
     }
-    await page.fill('input[type="email"]', 'admin@talos.security');
-    await page.fill('input[type="password"]', 'talos_secure_start');
-    await page.click('button:has-text("Sign In")');
+    await page.waitForSelector('input[type="password"]', { timeout: 15000 });
+    await page.locator('input[type="email"]').fill('admin@talos.security');
+    await page.locator('input[type="password"]').fill('talos_secure_start');
+    await page.getByRole('button', { name: 'Sign In' }).click();
     await page.waitForURL('/console', { timeout: 10000 });
   });
 
@@ -19,11 +28,7 @@ test.describe('Dashboard Functional UI Tests', () => {
     // Check Mission Control visibility
     await expect(page.getByText('Mission Control')).toBeVisible();
 
-    // Wait for stats to load (pulse animation indicates loading)
-    await page.waitForSelector('.grid-cols-6', { timeout: 15000 });
-
-    // Verify presence of summary stats/cards - looking for labels like "Total Requests"
-    await expect(page.getByText('Total Requests')).toBeVisible();
+    await expect(page.getByText('Total Requests')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Auth Success')).toBeVisible();
 
     // Navigate to Audit Log
@@ -50,7 +55,7 @@ test.describe('Dashboard Functional UI Tests', () => {
 
   test('should verify settings and profile accessibility', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.locator('h1')).toContainText(/Settings/i);
+    await expect(page.getByText('Dashboard Settings')).toBeVisible({ timeout: 15000 });
     
     // Check for configuration forms in settings
     const formElements = page.locator('input, select, button');

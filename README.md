@@ -18,8 +18,8 @@ Key environment variables:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Client-side API base for HTTP mode |
-| `TALOS_GATEWAY_URL` | `http://localhost:8000` | Server-side gateway health/control plane proxy |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8001` | Client-side API base for HTTP mode |
+| `TALOS_GATEWAY_URL` | `http://localhost:8001` | Server-side gateway health/control plane proxy |
 | `TALOS_AUDIT_URL` | `http://localhost:8001` | Audit/event proxy target |
 | `TALOS_CONNECTOR_URL` | `http://localhost:8082` | MCP resource proxy target |
 | `TALOS_CHAT_URL` | `http://localhost:8100` | Secure chat example backend |
@@ -44,7 +44,11 @@ npm run db:migrate
 npm run dev
 ```
 
+The default dashboard dev server uses Webpack to keep local file watching and memory usage bounded in the Talos monorepo. Turbopack remains available with `npm run dev:turbopack` when you need to test that engine specifically.
+
 The dashboard persists auth and setup state in Postgres. Before the first passkey/bootstrap run, point `DATABASE_URL` at a reachable Postgres instance and apply the checked-in Drizzle migrations with `npm run db:migrate`. Use `npm run db:generate` only when the schema changes and a new migration needs to be created.
+
+When the full Talos workspace is too heavy for local laptop iteration, use `make dev-lite` from the repo root. Offload Docker-heavy/full-compose work to `nilesh@nileshs-macbook-pro.local` with `bash scripts/remote-run.sh docker "<command>"`, and ARM64/Linux or live-device checks to `rpi@rpi.local` with `bash scripts/remote-run.sh rpi "<command>"`.
 
 Repo-owned helper:
 

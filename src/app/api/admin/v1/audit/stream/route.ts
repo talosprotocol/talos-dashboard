@@ -8,13 +8,44 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { validateRequest } from "@/lib/auth/session";
-import { TALOS_AUDIT_URL } from "@/lib/config";
+import { TALOS_AUDIT_URL, DATA_SOURCE_MODE } from "@/lib/config";
 import { getBrokeredAdminToken } from "@/lib/auth/adminTokenBroker";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest): Promise<Response> {
+  // Mock mode support
+  if (DATA_SOURCE_MODE === 'MOCK') {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        const mockEvent = {
+          type: "audit_event",
+          event: {
+            event_id: "evt_mock_1",
+            timestamp: Math.floor(Date.now() / 1000),
+            outcome: "OK",
+            principal_id: "mock-user",
+            action: "llm.chat",
+            resource: "gpt-4",
+            correlation_id: "corr_1"
+          }
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(mockEvent)}\n\n`));
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+      },
+    });
+  }
+
   const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
   let sessionData;
 

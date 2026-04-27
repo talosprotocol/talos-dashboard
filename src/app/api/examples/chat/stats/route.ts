@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const TIMEOUT_MS = 30000;
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8090";
+const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8100";
 
 /**
  * GET /api/examples/chat/stats

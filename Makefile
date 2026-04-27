@@ -44,13 +44,7 @@ db-studio:
 
 start:
 	@echo "Starting $(SERVICE_NAME)..."
-	@if [ -f $(PID_FILE) ] && kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
-		echo "$(SERVICE_NAME) is already running"; \
-	else \
-		npm run dev -- --port $(PORT) > /tmp/$(SERVICE_NAME).log 2>&1 & \
-		echo $$! > $(PID_FILE); \
-		echo "$(SERVICE_NAME) started (PID: $$!, Port: $(PORT))"; \
-	fi
+	@bash scripts/start.sh
 
 stop:
 	@echo "Stopping $(SERVICE_NAME)..."

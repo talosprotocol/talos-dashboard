@@ -13,8 +13,8 @@ import { useRef, useState } from "react";
 import { AuditEvent } from "@/lib/data/schemas";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { cn } from "@/lib/cn";
-import { CheckCircle2, FileJson, SearchX, ShieldAlert } from "lucide-react";
-import { ProofDrawer } from "./ProofDrawer";
+import { AlertTriangle, CheckCircle2, FileJson, SearchX, ShieldAlert } from "lucide-react";
+import { ProofDrawer, computeProofBadge } from "./ProofDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AuditTableProps {
@@ -69,17 +69,49 @@ const IdentityCell = ({ row }: { row: Row<AuditEvent> }) => {
 const ProofCell = ({ row }: { row: Row<AuditEvent> }) => {
     const integrity = row.original.integrity;
     if (!integrity) return null;
-    const valid = integrity.proof_state === "VERIFIED";
+    
+    const badge = computeProofBadge(integrity);
+    const isMismatch = integrity.failure_reason === "CURSOR_MISMATCH";
+
+    if (isMismatch) {
+        return (
+            <div className="flex items-center gap-1.5 text-red-500 font-bold animate-pulse">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span className="text-[10px]">TAMPERED</span>
+            </div>
+        )
+    }
+
+    if (badge === "FAILED") {
+        return (
+            <div className="flex items-center gap-1.5 text-red-500 font-bold">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span className="text-[10px]">FAILED</span>
+            </div>
+        )
+    }
+
+    if (badge === "MISSING_INPUTS") {
+        return (
+            <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span className="text-[10px]">MISSING</span>
+            </div>
+        )
+    }
+
+    if (badge === "VERIFIED") {
+        return (
+            <div className="flex items-center gap-1.5 text-emerald-500/80 font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="text-[10px]">VERIFIED</span>
+            </div>
+        )
+    }
+
     return (
-         <div className="flex items-center gap-1.5">
-            {valid ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/50" />
-            ) : (
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-500/50" />
-            )}
-            <span className={cn("text-[10px]", valid ? "text-[var(--text-muted)]" : "text-amber-500")}>
-                {integrity.proof_state}
-            </span>
+         <div className="flex items-center gap-1.5 text-[var(--text-muted)] font-bold">
+            <span className="text-[10px]">{badge}</span>
         </div>
     );
 };

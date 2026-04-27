@@ -1,4 +1,5 @@
 import { validateRequest } from '@/lib/auth/session';
+import { isDashboardAuthDisabled } from '@/lib/auth/mode';
 
 export class SecurityGateError extends Error {
   constructor(public code: string, message: string) {
@@ -8,6 +9,10 @@ export class SecurityGateError extends Error {
 }
 
 export function verifySetupGates() {
+  if (isDashboardAuthDisabled()) {
+    return true;
+  }
+
   // 1. Check for AUTH_SECRET
   if (!process.env.AUTH_SECRET) {
     throw new SecurityGateError(

@@ -66,7 +66,7 @@ This component integrates with:
 - DevOps Agent
 
 Environment variables for configuration:
-- `TALOS_GATEWAY_URL`: URL of the main Talos Gateway (default: http://localhost:8000)
+- `TALOS_GATEWAY_URL`: URL of the main Talos Gateway (default: http://localhost:8001)
 - `TALOS_AUDIT_URL`: URL of the audit service (default: http://localhost:8001)
 - `TALOS_CONNECTOR_URL`: URL of the MCP connector (default: http://localhost:8082)
 - `TALOS_CHAT_URL`: URL of the Secure Chat Agent (default: http://localhost:8100)

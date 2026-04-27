@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getCookieNames, verifyCookieSignature } from '@/lib/auth/edge-session';
+import { AUTH_BYPASS_HEADER, isDashboardAuthDisabled } from '@/lib/auth/mode';
 
-const SECRET_KEY = process.env.AUTH_COOKIE_HMAC_SECRET || 'dev-secret-change-me';
+const SECRET_KEY = process.env.AUTH_COOKIE_HMAC_SECRET || 'ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const authDisabled = isDashboardAuthDisabled();
 
   // 1. Strict Allowlist
   const isPublicRoute = 
@@ -30,14 +32,29 @@ export async function middleware(request: NextRequest) {
 
   // 3. Verify Cookie
   let isValid = false;
-  if (cookie?.value) {
+  if (authDisabled) {
+    isValid = true;
+  } else if (cookie?.value) {
     isValid = await verifyCookieSignature(cookie.value, SECRET_KEY);
   }
 
   // 4. Handle Routing
   let response: NextResponse;
 
-  if (isPublicRoute) {
+  if (authDisabled) {
+      if (pathname === '/login') {
+        response = NextResponse.redirect(new URL('/console', request.url));
+      } else {
+      // Always allow, just inject auth
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set(AUTH_BYPASS_HEADER, '1');
+      response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+      }
+  } else if (isPublicRoute) {
     if (isValid && pathname === '/login') {
       response = NextResponse.redirect(new URL('/console', request.url));
     } else {
@@ -54,7 +71,7 @@ export async function middleware(request: NextRequest) {
   } else {
     // Valid Session: Mutate REQUEST headers for downstream components
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-talos-auth', '1');
+    requestHeaders.set(AUTH_BYPASS_HEADER, '1');
 
     response = NextResponse.next({
       request: {
@@ -81,7 +98,7 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocations=()');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   return response;
 }

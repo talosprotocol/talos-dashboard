@@ -9,7 +9,7 @@ import { getBrokeredAdminToken } from '@/lib/auth/adminTokenBroker';
  */
 export async function GET(_req: NextRequest) {
   try {
-    const gatewayUrl = TALOS_GATEWAY_URL || 'http://localhost:8000';
+    const gatewayUrl = TALOS_GATEWAY_URL || 'http://localhost:8001';
     
     // Auth Check
     const isDevMode = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
@@ -32,13 +32,15 @@ export async function GET(_req: NextRequest) {
       const principalId = sessionData.user.id;
       headers['X-Talos-Principal-Id'] = principalId;
 
-      const token = await getBrokeredAdminToken({
-        principal: principalId,
-        permissions: ["llm.read"],
-        sessionId: sessionData.session?.id,
-      });
+      if (!isDevMode) {
+        const token = await getBrokeredAdminToken({
+          principal: principalId,
+          permissions: ["llm.read"],
+          sessionId: sessionData.session?.id,
+        });
 
-      headers['Authorization'] = `Bearer ${token}`;
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     // Try gateway status endpoint

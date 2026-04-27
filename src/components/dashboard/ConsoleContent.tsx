@@ -8,6 +8,7 @@ import { RequestVolumeChart } from "@/components/dashboard/RequestVolumeChart";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { useDataSource } from "@/lib/hooks/useDataSource";
 import Link from "next/link";
+import { RotateCw } from "lucide-react";
 
 /**
  * Console Content - Logic separated for client-side rendering
@@ -36,26 +37,21 @@ export default function ConsoleContent() {
 
             {/* Content */}
             {loading || !stats ? (
-                <div className="space-y-6 animate-pulse">
-                    <GlassPanel className="h-32 w-full bg-[var(--panel)]" />
-                    <GlassPanel className="h-96 w-full bg-[var(--panel)]" />
+                <div className="space-y-8 animate-pulse">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+                        {[...Array(7)].map((_, i) => (
+                            <GlassPanel key={i} className="h-32 w-full bg-[var(--panel)]" />
+                        ))}
+                    </div>
+                    <GlassPanel className="h-[600px] w-full bg-[var(--panel)]" />
                 </div>
             ) : (
                 <>
                     <KPIGrid stats={stats} />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                         {/* Main Feed */}
-                        <div className="lg:col-span-2">
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-xl font-bold tracking-tight">Activity Feed</h2>
-                                <button 
-                                    onClick={() => refreshSection('events')}
-                                    className="px-3 py-1 text-xs border border-[var(--border)] rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--text-muted)]"
-                                >
-                        Refresh Stream
-                    </button>
-                            </div>
+                        <div className="lg:col-span-3">
                             <ActivityFeed
                                 events={events}
                                 hasMore={hasMore}
@@ -65,18 +61,21 @@ export default function ConsoleContent() {
                         </div>
 
                         {/* Sidebar Charts */}
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-bold tracking-tight">Analytics</h2>
+                        <div className="space-y-8">
+                            <div className="flex justify-between items-center px-1">
+                                <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">Security Analytics</h2>
                                 <button 
                                     onClick={() => refreshSection('stats')}
-                                    className="px-3 py-1 text-xs border border-[var(--border)] rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--text-muted)]"
+                                    className="p-1.5 text-slate-500 hover:text-white transition-colors"
+                                    title="Refresh Metrics"
                                 >
-                        Refresh Metrics
-                    </button>
+                                    <RotateCw className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                            <DenialTaxonomyChart data={stats.denial_reason_counts} />
-                            <RequestVolumeChart data={stats.request_volume_series} />
+                            <div className="space-y-6">
+                                <DenialTaxonomyChart data={stats.denial_reason_counts} />
+                                <RequestVolumeChart data={stats.request_volume_series} />
+                            </div>
                         </div>
                     </div>
                 </>

@@ -63,6 +63,7 @@ export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarPro
 
   const coreItems = Object.entries(NAV_REGISTRY).filter(([, item]) => item.parent === null && item.group === "core");
   const adminItems = Object.entries(NAV_REGISTRY).filter(([, item]) => item.parent === null && item.group === "admin");
+  const demoItems = Object.entries(NAV_REGISTRY).filter(([, item]) => item.parent === null && item.group === "demos");
 
   return (
     <>
@@ -100,6 +101,19 @@ export function DashboardSidebar({ isOpen = true, onClose }: DashboardSidebarPro
               </div>
               <div className="space-y-0.5">
                 {adminItems.map(([href, item]) => (
+                  <NavLink key={href} href={href} item={item} pathname={pathname} onClose={onClose} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {demoItems.length > 0 && (
+            <>
+              <div className="px-3 py-2 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 mt-2 border-t border-white/5 pt-4">
+                Examples
+              </div>
+              <div className="space-y-0.5">
+                {demoItems.map(([href, item]) => (
                   <NavLink key={href} href={href} item={item} pathname={pathname} onClose={onClose} />
                 ))}
               </div>

@@ -3,7 +3,7 @@
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { AuditEvent } from "@/lib/data/schemas";
 import { cn } from "@/lib/cn";
-import { AlertCircle, ArrowRightLeft, CheckCircle, ShieldAlert, Terminal } from "lucide-react";
+import { Activity, AlertCircle, ArrowRightLeft, CheckCircle, ShieldAlert, Terminal } from "lucide-react";
 import { useState } from "react";
 import { ProofDrawer, computeProofBadge } from "./ProofDrawer";
 
@@ -18,25 +18,72 @@ interface ActivityFeedProps {
 
 export function ActivityFeed({ events, hasMore, onLoadMore, isLoading }: ActivityFeedProps) {
     const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
+    const [filter, setFilter] = useState<"ALL" | "DENY" | "ERROR">("ALL");
+    const [isPaused, setIsPaused] = useState(false);
+
+    const filteredEvents = events.filter(e => {
+        if (filter === "ALL") return true;
+        if (filter === "DENY") return e.outcome === "DENY";
+        if (filter === "ERROR") return e.outcome === "ERROR";
+        return true;
+    });
+
+    const isEffectivelyPaused = isPaused || !!selectedEvent;
 
     return (
         <>
-            <div className="w-full space-y-4">
-                <div className="flex items-center justify-between mb-4 px-1">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Live Activity Stream</h3>
-                    <div className="flex items-center gap-2">
-                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                         <span className="text-[10px] font-bold text-emerald-500 uppercase">Live</span>
+            <div 
+                className="w-full space-y-4"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+            >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 px-1 gap-4">
+                    <div className="flex items-center gap-4">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">Live Activity Stream</h3>
+                        {/* Filter Tabs */}
+                        <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
+                            {(["ALL", "DENY", "ERROR"] as const).map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={cn(
+                                        "px-3 py-1 text-[9px] font-black uppercase tracking-tighter rounded-md transition-all",
+                                        filter === f 
+                                            ? "bg-indigo-500 text-white shadow-sm" 
+                                            : "text-slate-500 hover:text-slate-300"
+                                    )}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                         {isEffectivelyPaused && (
+                             <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md animate-pulse">
+                                 <Activity className="w-3 h-3 text-amber-500" />
+                                 <span className="text-[9px] font-black text-amber-500 uppercase">Stream Paused</span>
+                             </div>
+                         )}
+                         <div className="flex items-center gap-2">
+                             <span className={cn("w-2 h-2 rounded-full transition-all", isEffectivelyPaused ? "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" : "bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]")} />
+                             <span className={cn("text-[10px] font-bold uppercase", isEffectivelyPaused ? "text-amber-500" : "text-emerald-500")}>
+                                 {isEffectivelyPaused ? "Paused" : "Live"}
+                             </span>
+                         </div>
                     </div>
                 </div>
 
-                {events.length === 0 && !isLoading && (
-                    <GlassPanel className="text-center py-10 text-slate-500 text-sm italic bg-white/[0.01] border-white/5">No activity recorded</GlassPanel>
+                {filteredEvents.length === 0 && !isLoading && (
+                    <GlassPanel className="text-center py-10 text-slate-500 text-sm italic bg-white/[0.01] border-white/5">
+                        No {filter !== "ALL" ? filter.toLowerCase() + " " : ""}activity recorded
+                    </GlassPanel>
                 )}
 
                 <div className="space-y-3 pb-4">
                     <AnimatePresence initial={false}>
-                        {events && events.map((event, index) => (
+                        {filteredEvents && filteredEvents.map((event, index) => (
                             <motion.div
                                 key={`${event.timestamp}-${event.event_id}`}
                                 initial={{ opacity: 0, x: -20 }}
@@ -129,6 +176,7 @@ function ActivityItem({ event, onClick }: { event: AuditEvent, onClick: () => vo
 
                     {/* Integrity Indicators */}
                     {(() => {
+                        if (!event.integrity) return null;
                         const badge = computeProofBadge(event.integrity);
                         const isMismatch = event.integrity.failure_reason === "CURSOR_MISMATCH";
 
@@ -173,7 +221,7 @@ function ActivityItem({ event, onClick }: { event: AuditEvent, onClick: () => vo
                         ) : (
                             <div className="flex items-center justify-end gap-1.5 text-[10px] text-indigo-400 font-mono font-bold">
                                 <span className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
-                                {event.hashes.request_hash?.slice(0, 8)}
+                                {event.hashes?.request_hash?.slice(0, 8) || 'N/A'}
                             </div>
                         )}
                     </div>

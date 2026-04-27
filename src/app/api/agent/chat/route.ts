@@ -4,7 +4,7 @@ import { validateRequest } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8090";
+const AGENT_URL = process.env.TALOS_CHAT_URL || "http://talos-chat-agent:8100";
 
 export async function POST(req: NextRequest) {
     // 1. Auth Check

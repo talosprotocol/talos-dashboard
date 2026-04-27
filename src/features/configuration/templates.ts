@@ -256,7 +256,7 @@ config_version: "1.0"
 global:
   env: "prod"
 gateway:
-  port: 8000
+  port: 8001
   host: "0.0.0.0"
   database_url_ref: "\${GATEWAY_DB_URL}"
 extensions:
@@ -303,7 +303,7 @@ config_version: "1.0"
 global:
   env: "prod"
 gateway:
-  port: 8000
+  port: 8001
   database_url_ref: "\${GATEWAY_DB_URL}"
 extensions:
   protocol: "graphql"
@@ -434,7 +434,7 @@ config_version: "1.0"
 global:
   env: "prod"
 gateway:
-  port: 8000
+  port: 8001
   host: "0.0.0.0"
   database_url_ref: "\${GATEWAY_DB_URL}"
 extensions:

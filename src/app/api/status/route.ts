@@ -16,10 +16,10 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Service URLs
-const GATEWAY_URL = process.env.TALOS_GATEWAY_URL ?? 'http://talos-gateway:8000';
-const AUDIT_URL = process.env.TALOS_AUDIT_URL ?? 'http://talos-audit-service:8000';
+const GATEWAY_URL = process.env.TALOS_GATEWAY_URL ?? 'http://talos-ai-gateway:8001';
+const AUDIT_URL = process.env.TALOS_AUDIT_URL ?? 'http://talos-audit-service:8002';
 const CONNECTOR_URL = process.env.TALOS_CONNECTOR_URL ?? 'http://talos-mcp-connector:8082';
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? 'http://talos-chat-agent:8090';
+const CHAT_URL = process.env.TALOS_CHAT_URL ?? 'http://talos-chat-agent:8100';
 
 type ServiceState = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
 

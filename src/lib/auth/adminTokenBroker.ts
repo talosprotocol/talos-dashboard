@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AUTH_ADMIN_SECRET, TALOS_GATEWAY_URL } from "../config";
+import { AUTH_ADMIN_SECRET, TALOS_GATEWAY_URL, DATA_SOURCE_MODE } from "../config";
 
 const ADMIN_TOKEN_BROKER_PATH = "/admin/v1/auth/token";
 const TOKEN_EXPIRY_SAFETY_WINDOW_MS = 30_000;
@@ -104,6 +104,10 @@ async function fetchBrokeredToken(input: TokenBrokerRequest): Promise<string> {
 }
 
 export async function getBrokeredAdminToken(input: TokenBrokerRequest): Promise<string> {
+  if (DATA_SOURCE_MODE === 'MOCK') {
+    return "mock-admin-token";
+  }
+
   const key = cacheKey(input);
   const cached = tokenCache.get(key);
   if (cached && cacheEntryFresh(cached)) {

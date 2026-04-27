@@ -37,9 +37,10 @@ function numberValue(value: unknown, fallback = 0): number {
 async function fetchStats() {
   let usageStats: JsonObject | null = null;
   let auditStats: JsonObject | null = null;
+  const origin = self.location.origin;
   
   try {
-    const res1 = await fetch('/api/admin/v1/telemetry/stats?window_hours=24');
+    const res1 = await fetch(new URL('/api/admin/v1/telemetry/stats?window_hours=24', origin).toString());
     if (res1.ok) {
       const data = await res1.json();
       usageStats = isRecord(data) ? data : null;
@@ -47,7 +48,7 @@ async function fetchStats() {
   } catch {}
 
   try {
-    const res2 = await fetch('/api/admin/v1/audit/stats?window_hours=24');
+    const res2 = await fetch(new URL('/api/admin/v1/audit/stats?window_hours=24', origin).toString());
     if (res2.ok) {
       const data = await res2.json();
       auditStats = isRecord(data) ? data : null;
@@ -95,7 +96,8 @@ async function fetchEvents() {
 
 async function fetchGatewayStatus() {
   try {
-      const res = await fetch('/api/admin/v1/gateway/status');
+      const origin = self.location.origin;
+      const res = await fetch(new URL('/api/admin/v1/gateway/status', origin).toString());
       if (res.ok) {
           const data = await res.json();
           CACHE.gatewayStatus = data;

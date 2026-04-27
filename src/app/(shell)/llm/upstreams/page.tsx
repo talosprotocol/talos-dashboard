@@ -10,6 +10,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 export default function UpstreamsPage() {
     const [upstreams, setUpstreams] = useState<Upstream[]>([]);
     const [loading, setLoading] = useState(true);
+    const [togglingIds, setTogglingIds] = useState<Record<string, boolean>>({});
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Upstream | null>(null);
     const [saving, setSaving] = useState(false);
@@ -90,6 +91,29 @@ export default function UpstreamsPage() {
         }
     };
 
+    const handleToggle = async (upstream: Upstream) => {
+        setTogglingIds(prev => ({ ...prev, [upstream.id]: true }));
+        try {
+            const result = await dataSource.updateUpstream(
+                upstream.id,
+                { enabled: !upstream.enabled },
+                upstream.version
+            );
+            setUpstreams(prev =>
+                prev.map(u => u.id === upstream.id ? { ...u, ...result } : u)
+            );
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            toast({
+                title: "Toggle Failed",
+                description: `Failed to update upstream state: ${msg}`,
+                variant: "destructive"
+            });
+        } finally {
+            setTogglingIds(prev => ({ ...prev, [upstream.id]: false }));
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -163,16 +187,24 @@ export default function UpstreamsPage() {
                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
                                                 onClick={() => handleOpenEdit(u)}
+                                                disabled={Boolean(togglingIds[u.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-[var(--accent)]"
                                                 title="Edit Upstream"
                                             >
                                                 <Edit2 size={16} />
                                             </button>
-                                            <button className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-emerald-500">
+                                            <button
+                                                onClick={() => handleToggle(u)}
+                                                disabled={Boolean(togglingIds[u.id])}
+                                                aria-label={`${u.enabled ? "Disable" : "Enable"} upstream ${u.id}`}
+                                                title={`${u.enabled ? "Disable" : "Enable"} upstream ${u.id}`}
+                                                className={`p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] ${u.enabled ? "hover:text-rose-500" : "hover:text-emerald-500"} disabled:opacity-50`}
+                                            >
                                                 <Power size={16} />
                                             </button>
                                             <button 
                                                 onClick={() => handleDelete(u.id)}
+                                                disabled={Boolean(togglingIds[u.id])}
                                                 className="p-1.5 hover:bg-[var(--panel-hover)] rounded-md text-[var(--text-muted)] hover:text-rose-500"
                                             >
                                                 <Trash2 size={16} />

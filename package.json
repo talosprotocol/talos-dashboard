@@ -4,7 +4,8 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbopack": "next dev",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
@@ -62,6 +63,8 @@
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
@@ -72,6 +75,7 @@
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^29.0.2",
     "lint-staged": "^15.5.2",
     "prettier": "^3.7.4",
     "tailwindcss": "^4",

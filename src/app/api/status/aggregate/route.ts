@@ -44,7 +44,7 @@ interface StatusResponse {
 const SERVICES = [
   {
     name: "gateway",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
+    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
     endpoint: "/healthz",
   },
   {
@@ -59,12 +59,12 @@ const SERVICES = [
   },
   {
     name: "ollama",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
+    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
     endpoint: "/health/ollama",
   },
   {
     name: "governance",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8000",
+    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
     endpoint: "/health/tga",
   },
 ];

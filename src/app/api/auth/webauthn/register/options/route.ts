@@ -19,7 +19,18 @@ export async function POST() {
 
     // 1. Strict Origin Check
     const origin = (await headers()).get('origin');
-    if (origin !== APP_ORIGIN) {
+    const isDev = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
+    
+    // In dev, use the actual origin hostname as RP_ID to satisfy browser security
+    const effectiveRpId = isDev && origin ? (new URL(origin).hostname) : RP_ID;
+
+    const isValidOrigin = origin === APP_ORIGIN || (isDev && (
+        origin === 'http://localhost:3000' || 
+        origin === 'http://127.0.0.1:3000'
+    ));
+
+    if (!isValidOrigin) {
+        console.error(`[WebAuthn] Origin mismatch: received "${origin}", expected "${APP_ORIGIN}"`);
         return NextResponse.json({ error: 'Invalid origin' }, { status: 403 });
     }
 
@@ -82,7 +93,7 @@ export async function POST() {
     // 4. Generate Options
     const options = await generateRegistrationOptions({
         rpName: RP_NAME,
-        rpID: RP_ID,
+        rpID: effectiveRpId,
         userID: new Uint8Array(Buffer.from(userId)), 
         userName: userEmail || 'admin',
         excludeCredentials,

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 const TIMEOUT_MS = 60000;
 const MAX_BODY = 64 * 1024; // 64KB
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8090";
+const CHAT_URL = process.env.TALOS_CHAT_URL ?? "http://localhost:8100";
 
 // --- Schema Validation ---
 

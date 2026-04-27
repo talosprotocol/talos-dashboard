@@ -181,7 +181,9 @@ export class HttpDataSource implements DataSource {
     }
 
     async listMcpPolicies(teamId?: string): Promise<McpPolicy[]> {
-        const url = new URL(`${this.baseUrl}/admin/v1/mcp/policies`);
+        const isClient = typeof window !== "undefined";
+        const origin = isClient ? window.location.origin : "http://localhost:3000";
+        const url = new URL(`${this.baseUrl}/admin/v1/mcp/policies`, origin);
         if (teamId) url.searchParams.set("team_id", teamId);
         const res = await fetch(url.toString());
         if (!res.ok) throw new Error("Failed to list MCP policies");
