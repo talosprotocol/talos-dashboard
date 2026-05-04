@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { DATA_SOURCE_MODE } from "@/lib/config";
 
 // Force dynamic rendering - no caching
 export const dynamic = "force-dynamic";
@@ -37,10 +38,6 @@ interface StatusResponse {
 // Configuration
 // =============================================================================
 
-/**
- * Service configuration from environment variables.
- * Defaults are for local development ONLY - see .env.example
- */
 const SERVICES = [
   {
     name: "gateway",
@@ -69,7 +66,6 @@ const SERVICES = [
   },
 ];
 
-// Per-service timeout (ms) - prevents hanging on slow/dead services
 const SERVICE_TIMEOUT_MS = 3000;
 
 // =============================================================================
@@ -81,7 +77,6 @@ async function checkService(
 ): Promise<ServiceResult> {
   const { name, url, endpoint } = config;
 
-  // Handle misconfigured services
   if (!url) {
     return {
       name,
@@ -114,7 +109,6 @@ async function checkService(
       };
     }
 
-    // Non-2xx response
     return {
       name,
       status: "offline",
@@ -123,8 +117,6 @@ async function checkService(
     };
   } catch (error: unknown) {
     const latency_ms = Date.now() - start;
-
-    // Determine error type with taxonomy-aligned codes
     let error_code = "TALOS_FETCH_ERROR";
 
     if (error instanceof Error) {
@@ -149,14 +141,6 @@ async function checkService(
   }
 }
 
-/**
- * Compute aggregate status from individual results.
- *
- * Rules:
- * - healthy: all online
- * - degraded: at least one online and at least one offline
- * - unknown: none online, or configuration missing for all
- */
 function computeAggregateStatus(
   results: ServiceResult[],
 ): "healthy" | "degraded" | "unknown" {
@@ -175,8 +159,6 @@ function computeAggregateStatus(
     return "unknown";
   }
 
-  // At least one online and at least one not online = degraded
-  // All offline = degraded (not unknown, because we know they're offline)
   return "degraded";
 }
 
@@ -185,6 +167,21 @@ function computeAggregateStatus(
 // =============================================================================
 
 export async function GET(): Promise<NextResponse<StatusResponse>> {
+  // Mock mode support
+  if (DATA_SOURCE_MODE === 'MOCK') {
+    const results: ServiceResult[] = SERVICES.map(s => ({
+        name: s.name,
+        status: "online",
+        latency_ms: 10
+    }));
+    
+    return NextResponse.json({
+        services: results,
+        aggregateStatus: "healthy",
+        timestamp: Date.now()
+    });
+  }
+
   const results = await Promise.all(SERVICES.map(checkService));
 
   const response: StatusResponse = {

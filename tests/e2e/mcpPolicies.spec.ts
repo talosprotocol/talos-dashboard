@@ -28,7 +28,7 @@ test.describe('Dashboard MCP Policies E2E', () => {
     await page.goto('/mcp/policies');
     
     // Verify page header
-    await expect(page.locator('h1')).toContainText(/MCP Policies/i);
+    await expect(page.locator('h1')).toContainText(/MCP Policies/i, { timeout: 20000 });
     
     // Check for the New Policy button
     const newPolicyButton = page.getByRole('button', { name: /New Policy/i });

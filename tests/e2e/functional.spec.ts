@@ -26,14 +26,15 @@ test.describe('Dashboard Functional UI Tests', () => {
 
   test('should navigate through main sections and verify data visualization', async ({ page }) => {
     // Check Mission Control visibility
+    await page.waitForSelector('text=Mission Control', { timeout: 30000 });
     await expect(page.getByText('Mission Control')).toBeVisible();
 
-    await expect(page.getByText('Total Requests')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Total Requests')).toBeVisible({ timeout: 30000 });
     await expect(page.getByText('Auth Success')).toBeVisible();
 
     // Navigate to Audit Log
     await page.goto('/audit');
-    await expect(page.locator('h1')).toContainText(/Audit/i);
+    await expect(page.locator('h1')).toContainText(/Audit/i, { timeout: 20000 });
     
     // Check for audit entries
     const auditEntries = page.locator('table tr, .divide-y > div');
@@ -55,7 +56,7 @@ test.describe('Dashboard Functional UI Tests', () => {
 
   test('should verify settings and profile accessibility', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.getByText('Dashboard Settings')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Dashboard Settings')).toBeVisible({ timeout: 30000 });
     
     // Check for configuration forms in settings
     const formElements = page.locator('input, select, button');

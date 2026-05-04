@@ -81,11 +81,11 @@ The supported bootstrap path is the passkey/device flow on `/login`, which suppo
 
 ## References
 
-- [Wiki Home](docs/wiki/Home.md)
-- [Architecture](docs/wiki/Architecture.md)
-- [Development](docs/wiki/Development.md)
-- [Features](docs/wiki/Features.md)
-- [API](docs/wiki/API.md)
+- [Wiki Home](https://github.com/talosprotocol/talos/wiki/Home)
+- [Architecture](https://github.com/talosprotocol/talos/wiki/Architecture)
+- [Development](https://github.com/talosprotocol/talos/wiki/Development)
+- [Features](https://github.com/talosprotocol/talos/wiki/Features)
+- [API](https://github.com/talosprotocol/talos/wiki/API)
 
 ## License
 
