@@ -18,6 +18,7 @@ export interface BuildInfo {
 export interface ConfigCheck {
   status: HealthCheckStatus;
   missing_required: string[];
+  invalid_required: string[];
   missing_recommended: string[];
 }
 
@@ -47,18 +48,30 @@ const REQUIRED_ENV_VARS = [
 ] as const;
 
 const RECOMMENDED_ENV_VARS = ["AUTH_SECRET", "TALOS_BOOTSTRAP_TOKEN"] as const;
+const PRODUCTION_SECRET_MIN_LENGTHS: Record<string, number> = {
+  AUTH_SECRET: 32,
+  ADMIN_PASSWORD: 16,
+  AUTH_ADMIN_SECRET: 32,
+  AUTH_COOKIE_HMAC_SECRET: 43,
+};
+const KNOWN_WEAK_SECRETS = new Set([
+  "changeme_local_auth_secret",
+  "changeme_local_admin_secret",
+  "dev-admin-secret",
+  "talos_secure_start",
+  "production_secret_change_me_in_prod_env",
+  "ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ",
+]);
 
-function missingEnvVars(
-  names: readonly string[],
-  env: EnvMap,
-): string[] {
+function missingEnvVars(names: readonly string[], env: EnvMap): string[] {
   return names.filter((name) => !env[name]);
 }
 
 export function getBuildInfo(env: EnvMap = process.env): BuildInfo {
   return {
     service: "talos-dashboard",
-    version: env.VERSION || env.npm_package_version || dashboardPkg.version || "0.0.0",
+    version:
+      env.VERSION || env.npm_package_version || dashboardPkg.version || "0.0.0",
     gitSha: env.GIT_SHA || "unknown",
     buildTime: env.BUILD_TIME || "unknown",
     timestamp: new Date().toISOString(),
@@ -66,17 +79,47 @@ export function getBuildInfo(env: EnvMap = process.env): BuildInfo {
 }
 
 export function checkConfig(env: EnvMap = process.env): ConfigCheck {
-  const missing_required = missingEnvVars(REQUIRED_ENV_VARS, env);
+  const production =
+    env.NODE_ENV === "production" ||
+    env.TALOS_ENV === "production" ||
+    env.TALOS_ENV === "staging";
+  const requiredVars = production
+    ? [...REQUIRED_ENV_VARS, ...Object.keys(PRODUCTION_SECRET_MIN_LENGTHS)]
+    : REQUIRED_ENV_VARS;
+  const missing_required = missingEnvVars(requiredVars, env);
+  const invalid_required = production
+    ? Object.entries(PRODUCTION_SECRET_MIN_LENGTHS)
+        .filter(([name, minLength]) => {
+          const value = env[name]?.trim();
+          const malformedCookieSecret =
+            name === "AUTH_COOKIE_HMAC_SECRET" &&
+            value !== undefined &&
+            !/^[A-Za-z0-9_-]{43,}$/.test(value);
+          return Boolean(
+            value &&
+            (value.length < minLength ||
+              malformedCookieSecret ||
+              KNOWN_WEAK_SECRETS.has(value)),
+          );
+        })
+        .map(([name]) => name)
+    : [];
   const missing_recommended = missingEnvVars(RECOMMENDED_ENV_VARS, env);
 
   return {
-    status: missing_required.length === 0 ? "pass" : "fail",
+    status:
+      missing_required.length === 0 && invalid_required.length === 0
+        ? "pass"
+        : "fail",
     missing_required,
+    invalid_required,
     missing_recommended,
   };
 }
 
-export async function checkDatabase(dbPool: Queryable = pool): Promise<DatabaseCheck> {
+export async function checkDatabase(
+  dbPool: Queryable = pool,
+): Promise<DatabaseCheck> {
   const started = Date.now();
   try {
     await dbPool.query("select 1");
@@ -115,30 +158,30 @@ export async function getReadinessReport(
 export function renderPrometheusMetrics(report: ReadinessReport): string {
   const { build, checks, status } = report;
   const metrics = [
-    '# HELP talos_dashboard_build_info Build metadata for the dashboard package.',
-    '# TYPE talos_dashboard_build_info gauge',
+    "# HELP talos_dashboard_build_info Build metadata for the dashboard package.",
+    "# TYPE talos_dashboard_build_info gauge",
     `talos_dashboard_build_info{service="${build.service}",version="${build.version}",git_sha="${build.gitSha}",build_time="${build.buildTime}"} 1`,
-    '# HELP talos_dashboard_ready Dashboard readiness status.',
-    '# TYPE talos_dashboard_ready gauge',
+    "# HELP talos_dashboard_ready Dashboard readiness status.",
+    "# TYPE talos_dashboard_ready gauge",
     `talos_dashboard_ready ${status === "ready" ? 1 : 0}`,
-    '# HELP talos_dashboard_config_ready Required configuration is present.',
-    '# TYPE talos_dashboard_config_ready gauge',
+    "# HELP talos_dashboard_config_ready Required configuration is present.",
+    "# TYPE talos_dashboard_config_ready gauge",
     `talos_dashboard_config_ready ${checks.config.status === "pass" ? 1 : 0}`,
-    '# HELP talos_dashboard_config_missing_required Count of missing required environment variables.',
-    '# TYPE talos_dashboard_config_missing_required gauge',
+    "# HELP talos_dashboard_config_missing_required Count of missing required environment variables.",
+    "# TYPE talos_dashboard_config_missing_required gauge",
     `talos_dashboard_config_missing_required ${checks.config.missing_required.length}`,
-    '# HELP talos_dashboard_config_missing_recommended Count of missing recommended environment variables.',
-    '# TYPE talos_dashboard_config_missing_recommended gauge',
+    "# HELP talos_dashboard_config_missing_recommended Count of missing recommended environment variables.",
+    "# TYPE talos_dashboard_config_missing_recommended gauge",
     `talos_dashboard_config_missing_recommended ${checks.config.missing_recommended.length}`,
-    '# HELP talos_dashboard_db_up Database connectivity status.',
-    '# TYPE talos_dashboard_db_up gauge',
+    "# HELP talos_dashboard_db_up Database connectivity status.",
+    "# TYPE talos_dashboard_db_up gauge",
     `talos_dashboard_db_up ${checks.database.status === "pass" ? 1 : 0}`,
   ];
 
   if (typeof checks.database.latency_ms === "number") {
     metrics.push(
-      '# HELP talos_dashboard_db_latency_ms Database readiness probe latency in milliseconds.',
-      '# TYPE talos_dashboard_db_latency_ms gauge',
+      "# HELP talos_dashboard_db_latency_ms Database readiness probe latency in milliseconds.",
+      "# TYPE talos_dashboard_db_latency_ms gauge",
       `talos_dashboard_db_latency_ms ${checks.database.latency_ms}`,
     );
   }

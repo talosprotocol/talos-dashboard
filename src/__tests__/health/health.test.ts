@@ -34,6 +34,48 @@ describe("dashboard health helpers", () => {
     expect(result.missing_recommended).toContain("TALOS_BOOTSTRAP_TOKEN");
   });
 
+  it("rejects missing or weak authentication secrets in production readiness", () => {
+    const missing = checkConfig({ NODE_ENV: "production" });
+    expect(missing.status).toBe("fail");
+    expect(missing.missing_required).toContain("AUTH_ADMIN_SECRET");
+
+    const weak = checkConfig({
+      NODE_ENV: "production",
+      APP_ORIGIN: "https://talos.example",
+      NEXT_PUBLIC_APP_ORIGIN: "https://talos.example",
+      NEXT_PUBLIC_RP_ID: "talos.example",
+      AUTH_COOKIE_HMAC_SECRET:
+        "ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ",
+      AUTH_SECRET: "production_secret_change_me_in_prod_env",
+      ADMIN_PASSWORD: "talos_secure_start",
+      AUTH_ADMIN_SECRET: "dev-admin-secret",
+    });
+    expect(weak.status).toBe("fail");
+    expect(weak.invalid_required).toEqual([
+      "AUTH_SECRET",
+      "ADMIN_PASSWORD",
+      "AUTH_ADMIN_SECRET",
+      "AUTH_COOKIE_HMAC_SECRET",
+    ]);
+  });
+
+  it("marks production auth configuration ready when every secret meets policy", () => {
+    const result = checkConfig({
+      NODE_ENV: "production",
+      APP_ORIGIN: "https://talos.example",
+      NEXT_PUBLIC_APP_ORIGIN: "https://talos.example",
+      NEXT_PUBLIC_RP_ID: "talos.example",
+      AUTH_SECRET: "s".repeat(32),
+      ADMIN_PASSWORD: "p".repeat(16),
+      AUTH_ADMIN_SECRET: "a".repeat(32),
+      AUTH_COOKIE_HMAC_SECRET: "A".repeat(43),
+    });
+
+    expect(result.status).toBe("pass");
+    expect(result.missing_required).toEqual([]);
+    expect(result.invalid_required).toEqual([]);
+  });
+
   it("checks database readiness with latency reporting", async () => {
     const result = await checkDatabase({
       query: async (_sql: string) => ({ rows: [{ "?column?": 1 }] }),
@@ -78,6 +120,7 @@ describe("dashboard health helpers", () => {
         config: {
           status: "pass",
           missing_required: [],
+          invalid_required: [],
           missing_recommended: ["AUTH_SECRET"],
         },
         database: {
@@ -87,8 +130,8 @@ describe("dashboard health helpers", () => {
       },
     });
 
-    expect(metrics).toContain('talos_dashboard_ready 1');
-    expect(metrics).toContain('talos_dashboard_config_missing_recommended 1');
+    expect(metrics).toContain("talos_dashboard_ready 1");
+    expect(metrics).toContain("talos_dashboard_config_missing_recommended 1");
     expect(metrics).toContain('version="9.9.9"');
   });
 });

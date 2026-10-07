@@ -1,40 +1,64 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getCookieNames, verifyCookieSignature } from '@/lib/auth/edge-session';
-import { AUTH_BYPASS_HEADER, isDashboardAuthDisabled } from '@/lib/auth/mode';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getCookieNames, verifyCookieSignature } from "@/lib/auth/edge-session";
+import { AUTH_BYPASS_HEADER, isDashboardAuthDisabled } from "@/lib/auth/mode";
 
-const SECRET_KEY = process.env.AUTH_COOKIE_HMAC_SECRET || 'ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ';
+const SECRET_KEY =
+  process.env.AUTH_COOKIE_HMAC_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? ""
+    : "ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ");
+const WEAK_PRODUCTION_SECRETS = new Set([
+  "changeme_local_auth_secret",
+  "changeme_local_admin_secret",
+  "dev-admin-secret",
+  "talos_secure_start",
+  "production_secret_change_me_in_prod_env",
+  "ZGV2LXRhbG9zLWRhc2hib2FyZC1jb29raWUtc2lnbmluZy1zZWNyZXQ",
+]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authDisabled = isDashboardAuthDisabled();
 
   // 1. Strict Allowlist
-  const isPublicRoute = 
-    pathname === '/login' ||
-    pathname.startsWith('/api/auth/webauthn/') ||
-    pathname === '/api/auth/dev-login' ||
-    pathname === '/api/health' ||
-    pathname === '/api/debug/reset' ||
-    pathname === '/favicon.ico' ||
-    pathname.startsWith('/_next/') ||
+  const isPublicRoute =
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth/webauthn/") ||
+    pathname === "/api/auth/dev-login" ||
+    pathname === "/api/health" ||
+    pathname === "/api/debug/reset" ||
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/_next/") ||
     pathname.match(/\.(png|jpg|jpeg|svg|gif|webp)$/);
+
+  const productionCookieSecretInvalid =
+    process.env.NODE_ENV === "production" &&
+    (SECRET_KEY.length < 43 ||
+      !/^[A-Za-z0-9_-]{43,}$/.test(SECRET_KEY) ||
+      WEAK_PRODUCTION_SECRETS.has(SECRET_KEY));
+  if (productionCookieSecretInvalid && pathname !== "/api/health") {
+    return NextResponse.json(
+      { error: "Authentication is not configured" },
+      { status: 503 },
+    );
+  }
 
   // 2. Get Cookie
   const cookieNames = getCookieNames();
   let cookie;
   for (const name of cookieNames) {
-      if (request.cookies.has(name)) {
-          cookie = request.cookies.get(name);
-          break;
-      }
+    if (request.cookies.has(name)) {
+      cookie = request.cookies.get(name);
+      break;
+    }
   }
 
   // 3. Verify Cookie
   let isValid = false;
   if (authDisabled) {
     isValid = true;
-  } else if (cookie?.value) {
+  } else if (cookie?.value && SECRET_KEY) {
     isValid = await verifyCookieSignature(cookie.value, SECRET_KEY);
   }
 
@@ -42,36 +66,36 @@ export async function middleware(request: NextRequest) {
   let response: NextResponse;
 
   if (authDisabled) {
-      if (pathname === '/login') {
-        response = NextResponse.redirect(new URL('/console', request.url));
-      } else {
+    if (pathname === "/login") {
+      response = NextResponse.redirect(new URL("/console", request.url));
+    } else {
       // Always allow, just inject auth
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set(AUTH_BYPASS_HEADER, '1');
+      requestHeaders.set(AUTH_BYPASS_HEADER, "1");
       response = NextResponse.next({
         request: {
           headers: requestHeaders,
         },
       });
-      }
+    }
   } else if (isPublicRoute) {
-    if (isValid && pathname === '/login') {
-      response = NextResponse.redirect(new URL('/console', request.url));
+    if (isValid && pathname === "/login") {
+      response = NextResponse.redirect(new URL("/console", request.url));
     } else {
       response = NextResponse.next();
     }
   } else if (!isValid) {
     // Protected Routes: Redirect unauthenticated users to login
-    if (pathname.startsWith('/api')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('from', pathname);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
     response = NextResponse.redirect(loginUrl);
   } else {
     // Valid Session: Mutate REQUEST headers for downstream components
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set(AUTH_BYPASS_HEADER, '1');
+    requestHeaders.set(AUTH_BYPASS_HEADER, "1");
 
     response = NextResponse.next({
       request: {
@@ -92,18 +116,23 @@ export async function middleware(request: NextRequest) {
     form-action 'self';
     frame-ancestors 'none';
     upgrade-insecure-requests;
-  `.replace(/\s{2,}/g, ' ').trim();
+  `
+    .replace(/\s{2,}/g, " ")
+    .trim();
 
-  response.headers.set('Content-Security-Policy', cspHeader);
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set("Content-Security-Policy", cspHeader);
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()",
+  );
 
   return response;
 }
 
 export const config = {
   // Match everything except static assets
-  matcher: ['/((?!_next/static|_next/image).*)'],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };
