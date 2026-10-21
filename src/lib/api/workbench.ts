@@ -198,6 +198,17 @@ export const API_WORKBENCH_ROUTES: readonly ApiWorkbenchRoute[] = [
     methods: ["GET"],
   },
   {
+    id: "swarm-cards",
+    path: "/api/swarm/cards",
+    title: "Swarm Agent Cards",
+    description: "Query discovered A2A agent cards with cryptographic verification status, or probe peer endpoints.",
+    group: "Agent",
+    methods: ["GET", "POST"],
+    bodyTemplate: json({
+      endpoint: "http://192.168.1.189:8000/.well-known/agent.json"
+    }),
+  },
+  {
     id: "audit-proof",
     path: "/api/audit/proof/:id",
     title: "Audit Proof",

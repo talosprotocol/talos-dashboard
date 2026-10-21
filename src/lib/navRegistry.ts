@@ -33,6 +33,13 @@ export const NAV_REGISTRY: Record<string, NavItem> = {
         group: "core",
         parent: null,
     },
+    "/swarm": {
+        label: "Swarm Directory",
+        icon: "🌐",
+        ariaLabel: "A2A Agent Swarm Directory",
+        group: "core",
+        parent: null,
+    },
     "/configuration": {
         label: "Configuration",
         icon: "⚙️",

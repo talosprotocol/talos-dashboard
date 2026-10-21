@@ -48,4 +48,5 @@ package-lock.json
 conformance.xml
 junit.xml
 .vscode/
+.agent/
 *.log
