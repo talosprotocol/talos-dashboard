@@ -8,7 +8,13 @@
  */
 
 import { NextResponse } from "next/server";
-import { DATA_SOURCE_MODE } from "@/lib/config";
+import {
+  DATA_SOURCE_MODE,
+  TALOS_AUDIT_URL,
+  TALOS_CONNECTOR_URL,
+  TALOS_GATEWAY_URL,
+  TALOS_GOVERNANCE_URL,
+} from "@/lib/config";
 
 // Force dynamic rendering - no caching
 export const dynamic = "force-dynamic";
@@ -41,28 +47,28 @@ interface StatusResponse {
 const SERVICES = [
   {
     name: "gateway",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
-    endpoint: "/healthz",
+    url: TALOS_GATEWAY_URL,
+    endpoint: "/health/ready",
   },
   {
     name: "audit",
-    url: process.env.TALOS_AUDIT_URL ?? "http://localhost:8002",
+    url: TALOS_AUDIT_URL,
     endpoint: "/health",
   },
   {
     name: "connector",
-    url: process.env.TALOS_CONNECTOR_URL ?? "http://localhost:8082",
+    url: TALOS_CONNECTOR_URL,
     endpoint: "/health",
   },
   {
     name: "ollama",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
+    url: TALOS_GATEWAY_URL,
     endpoint: "/health/ollama",
   },
   {
     name: "governance",
-    url: process.env.TALOS_GATEWAY_URL ?? "http://localhost:8001",
-    endpoint: "/health/tga",
+    url: TALOS_GOVERNANCE_URL,
+    endpoint: "/health",
   },
 ];
 

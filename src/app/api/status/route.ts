@@ -8,7 +8,13 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { DATA_SOURCE_MODE, TALOS_AUDIT_URL as _TALOS_AUDIT_URL, TALOS_GATEWAY_URL as _TALOS_GATEWAY_URL, TALOS_CONNECTOR_URL as _TALOS_CONNECTOR_URL, TALOS_CHAT_URL as _TALOS_CHAT_URL } from '@/lib/config';
+import {
+  DATA_SOURCE_MODE,
+  TALOS_AUDIT_URL,
+  TALOS_CHAT_URL,
+  TALOS_CONNECTOR_URL,
+  TALOS_GATEWAY_URL,
+} from '@/lib/config';
 import { MockDataSource } from '@/lib/mockData';
 import { validateRequest } from '@/lib/auth/session';
 
@@ -16,10 +22,10 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // Service URLs
-const GATEWAY_URL = process.env.TALOS_GATEWAY_URL ?? 'http://talos-ai-gateway:8001';
-const AUDIT_URL = process.env.TALOS_AUDIT_URL ?? 'http://talos-audit-service:8002';
-const CONNECTOR_URL = process.env.TALOS_CONNECTOR_URL ?? 'http://talos-mcp-connector:8082';
-const CHAT_URL = process.env.TALOS_CHAT_URL ?? 'http://talos-chat-agent:8100';
+const GATEWAY_URL = TALOS_GATEWAY_URL;
+const AUDIT_URL = TALOS_AUDIT_URL;
+const CONNECTOR_URL = TALOS_CONNECTOR_URL;
+const CHAT_URL = TALOS_CHAT_URL;
 
 type ServiceState = 'ONLINE' | 'OFFLINE' | 'DEGRADED';
 
@@ -40,14 +46,18 @@ interface StatusResponse {
   timestamp: string;
 }
 
-async function checkService(url: string, name: string, timeoutMs: number = 2000): Promise<ServiceStatus> {
+async function checkService(
+  url: string,
+  healthPath: string,
+  timeoutMs: number = 2000,
+): Promise<ServiceStatus> {
   const startTime = Date.now();
   
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
-    const response = await fetch(`${url}/health`, {
+    const response = await fetch(`${url}${healthPath}`, {
       method: 'GET',
       signal: controller.signal,
     });
@@ -125,10 +135,10 @@ export async function GET(_req: NextRequest): Promise<Response> {
   // Check All Services in Parallel
   // ---------------------------------------------
   const [gateway, audit, connector, chat] = await Promise.all([
-    checkService(GATEWAY_URL, 'gateway'),
-    checkService(AUDIT_URL, 'audit'),
-    checkService(CONNECTOR_URL, 'connector'),
-    checkService(CHAT_URL, 'chat'),
+    checkService(GATEWAY_URL, '/health/ready'),
+    checkService(AUDIT_URL, '/health'),
+    checkService(CONNECTOR_URL, '/health'),
+    checkService(CHAT_URL, '/health'),
   ]);
 
   const response: StatusResponse = {
