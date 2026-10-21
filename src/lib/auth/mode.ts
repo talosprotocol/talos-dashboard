@@ -19,15 +19,27 @@ export type DashboardAuthMode = {
   source: string;
 };
 
-export function resolveDashboardAuthMode(env: AuthEnv = process.env): DashboardAuthMode {
+export function resolveDashboardAuthMode(
+  env: AuthEnv = process.env,
+): DashboardAuthMode {
   const authRequired = readBoolean(env.TALOS_AUTH_REQUIRED);
+  const deployedEnvironment =
+    env.NODE_ENV === "production" ||
+    env.TALOS_ENV === "production" ||
+    env.TALOS_ENV === "staging";
+  if (deployedEnvironment && authRequired !== true) {
+    return { required: true, source: "production-enforced" };
+  }
   if (authRequired !== undefined) {
     return { required: authRequired, source: "TALOS_AUTH_REQUIRED" };
   }
 
   const publicAuthRequired = readBoolean(env.NEXT_PUBLIC_TALOS_AUTH_REQUIRED);
   if (publicAuthRequired !== undefined) {
-    return { required: publicAuthRequired, source: "NEXT_PUBLIC_TALOS_AUTH_REQUIRED" };
+    return {
+      required: publicAuthRequired,
+      source: "NEXT_PUBLIC_TALOS_AUTH_REQUIRED",
+    };
   }
 
   const legacyDisableLogin = readBoolean(env.TALOS_DISABLE_LOGIN);
@@ -37,7 +49,10 @@ export function resolveDashboardAuthMode(env: AuthEnv = process.env): DashboardA
 
   const publicLegacyDisableLogin = readBoolean(env.NEXT_PUBLIC_DISABLE_LOGIN);
   if (publicLegacyDisableLogin !== undefined) {
-    return { required: !publicLegacyDisableLogin, source: "NEXT_PUBLIC_DISABLE_LOGIN" };
+    return {
+      required: !publicLegacyDisableLogin,
+      source: "NEXT_PUBLIC_DISABLE_LOGIN",
+    };
   }
 
   return { required: false, source: "default-local-bypass" };

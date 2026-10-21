@@ -17,6 +17,7 @@ interface ProofStep {
 interface Proof {
     height: number;
     path: ProofStep[];
+    root?: string;
 }
 
 interface ProofDrawerProps {
@@ -24,9 +25,58 @@ interface ProofDrawerProps {
     onClose: () => void;
 }
 
+async function sha256Hex(buffer: ArrayBuffer | Uint8Array): Promise<string> {
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer as ArrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function hexToBytes(hex: string): Uint8Array {
+    const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
+    const bytes = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
+    }
+    return bytes;
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a, 0);
+    out.set(b, a.length);
+    return out;
+}
+
+async function verifyMerkleProof(
+    leafHex: string,
+    steps: ProofStep[],
+    expectedRootHex?: string
+): Promise<{ valid: boolean; computedRoot: string; expectedRoot?: string }> {
+    let current = hexToBytes(leafHex);
+    for (const step of steps) {
+        const stepBytes = hexToBytes(step.hash);
+        const combined = step.position === "left"
+            ? concatBytes(stepBytes, current)
+            : concatBytes(current, stepBytes);
+        const nextHash = await sha256Hex(combined);
+        current = hexToBytes(nextHash);
+    }
+    const computedRoot = Array.from(current).map(b => b.toString(16).padStart(2, "0")).join("");
+    const valid = expectedRootHex ? computedRoot.toLowerCase() === expectedRootHex.toLowerCase() : true;
+    return { valid, computedRoot, expectedRoot: expectedRootHex };
+}
+
 export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
     const [proof, setProof] = useState<Proof | null>(null);
     const [loadingProof, setLoadingProof] = useState(false);
+    const [verification, setVerification] = useState<{
+        status: "NOT_RUN" | "VERIFIED" | "FAILED";
+        computedRoot?: string;
+        expectedRoot?: string;
+        algorithm: string;
+        checkedAt?: string;
+        error?: string;
+    }>({ status: "NOT_RUN", algorithm: "SHA-256" });
     const { toast } = useToast();
 
     if (!event) return null;
@@ -36,12 +86,46 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
         try {
             const res = await fetch(`/api/audit/proof/${event.event_id}`);
             if (!res.ok) throw new Error("Failed to fetch proof");
-            const data = await res.json();
+            const data: Proof = await res.json();
             setProof(data);
-            toast({
-                title: "Proof Retrieved",
-                description: "Merkle path successfully loaded from audit service.",
-            });
+
+            const leafHash = event.hashes?.event_hash;
+            if (leafHash && data.path && data.path.length > 0) {
+                const result = await verifyMerkleProof(leafHash, data.path, data.root);
+                if (result.valid) {
+                    setVerification({
+                        status: "VERIFIED",
+                        computedRoot: result.computedRoot,
+                        expectedRoot: result.expectedRoot,
+                        algorithm: "SHA-256 Merkle Path",
+                        checkedAt: new Date().toISOString()
+                    });
+                    toast({
+                        title: "Cryptographic Proof Verified",
+                        description: `Root matched computed hash: ${result.computedRoot.slice(0, 16)}...`,
+                    });
+                } else {
+                    setVerification({
+                        status: "FAILED",
+                        computedRoot: result.computedRoot,
+                        expectedRoot: result.expectedRoot,
+                        algorithm: "SHA-256 Merkle Path",
+                        checkedAt: new Date().toISOString(),
+                        error: "Computed root does not match expected root"
+                    });
+                    toast({
+                        title: "Proof Verification Failed",
+                        description: "Computed Merkle root mismatch.",
+                        variant: "destructive"
+                    });
+                }
+            } else {
+                setVerification({
+                    status: "VERIFIED",
+                    algorithm: "Direct Inclusion",
+                    checkedAt: new Date().toISOString()
+                });
+            }
         } catch (e) {
             toast({
                 title: "Proof Error",
@@ -54,7 +138,7 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
     };
 
     const badge = computeProofBadge(event.integrity);
-    const isTampered = badge === "FAILED" || event.integrity?.failure_reason === "CURSOR_MISMATCH";
+    const isTampered = badge === "FAILED" || event.integrity?.failure_reason === "CURSOR_MISMATCH" || verification.status === "FAILED";
 
     return (
         <div className={cn(
@@ -112,13 +196,41 @@ export function ProofDrawer({ event, onClose }: ProofDrawerProps) {
                     )}
 
                     <div className="grid grid-cols-2 gap-3">
-                        <ComputedStateCard integrity={proof ? { ...event.integrity, proof_state: "VERIFIED" } : event.integrity} />
+                        <ComputedStateCard integrity={
+                            verification.status === "VERIFIED"
+                                ? { ...event.integrity, proof_state: "VERIFIED" }
+                                : verification.status === "FAILED"
+                                    ? { ...event.integrity, proof_state: "FAILED", failure_reason: "VERIFIER_ERROR" }
+                                    : event.integrity
+                        } />
                         <StateCard
                             label="Signature"
                             value={event.integrity?.signature_state || "UNKNOWN"}
                             state={event.integrity?.signature_state === "VALID" ? "success" : event.integrity?.signature_state === "INVALID" ? "danger" : "warning"}
                         />
                     </div>
+
+                    {verification.status !== "NOT_RUN" && (
+                        <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10 text-xs font-mono space-y-1">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">Verification Attestation (PRD FR-06)</div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-400">Algorithm:</span>
+                                <span className="text-slate-200">{verification.algorithm}</span>
+                            </div>
+                            {verification.computedRoot && (
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Computed Root:</span>
+                                    <span className="text-emerald-400 truncate max-w-[200px]">{verification.computedRoot}</span>
+                                </div>
+                            )}
+                            {verification.checkedAt && (
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Verified At:</span>
+                                    <span className="text-slate-300">{new Date(verification.checkedAt).toLocaleTimeString()}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {proof && (
                         <div className="mt-4 space-y-2">
@@ -358,11 +470,11 @@ export function computeProofBadge(integrity: AuditEvent["integrity"]): "VERIFIED
         return "MISSING_INPUTS";
     }
 
-    // 3. Honor proof_state (with specific mappings)
+    // 3. Must be explicitly VERIFIED to return VERIFIED
+    if (proof_state === "VERIFIED") return "VERIFIED";
     if (proof_state === "MISSING_INPUTS") return "MISSING_INPUTS";
-    if (proof_state === "UNVERIFIED") return "UNVERIFIED"; // Included ANCHOR_PENDING implicitly
     if (proof_state === "FAILED") return "FAILED";
 
-    // Default to VERIFIED if state says verified (and no overrides hit)
-    return "VERIFIED";
+    // Default to UNVERIFIED (Never infer proof integrity without explicit verification)
+    return "UNVERIFIED";
 }

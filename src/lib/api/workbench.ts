@@ -440,6 +440,14 @@ export const API_WORKBENCH_ROUTES: readonly ApiWorkbenchRoute[] = [
     methods: ["GET"],
   },
   {
+    id: "setup-agents-list",
+    path: "/api/setup/agents",
+    title: "Setup Agents List",
+    description: "List all paired local setup helper agents.",
+    group: "Setup",
+    methods: ["GET"],
+  },
+  {
     id: "setup-agent-poll",
     path: "/api/setup/agents/:id/poll",
     title: "Setup Agent Poll",
